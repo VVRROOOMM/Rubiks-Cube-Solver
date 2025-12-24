@@ -569,29 +569,29 @@ void Cube::moveTableGenerate()
 	Corner DBL = stringToCorner("DBL");
 	
 	//creating edge rotation tables
-	moveGenHelpEdges({UF, UR, UB, UL}, U);
-	moveGenHelpEdges({UF, UL, UB, UR}, UP);
-	moveGenHelpEdges({UF, UB, UL, UR}, UD);
+	moveGenHelpEdges({UF, UR, UB, UL}, U, false);
+	moveGenHelpEdges({UF, UL, UB, UR}, UP, false);
+	moveGenHelpEdges({UF, UB, UL, UR}, UD, false);
 
-	moveGenHelpEdges({UL, BL, DL, FL}, L);
-	moveGenHelpEdges({UL, FL, DL, BL}, LP);
-	moveGenHelpEdges({UL, DL, FL, BL}, LD);
+	moveGenHelpEdges({UL, BL, DL, FL}, L, false);
+	moveGenHelpEdges({UL, FL, DL, BL}, LP, false);
+	moveGenHelpEdges({UL, DL, FL, BL}, LD, false);
 
-	moveGenHelpEdges({UF, FL, DF, FR}, F);
-	moveGenHelpEdges({UF, FR, DF, FL}, FP);
-	moveGenHelpEdges({UF, DF, FR, FL}, FD);
+	moveGenHelpEdges({UF, FL, DF, FR}, F, true);
+	moveGenHelpEdges({UF, FR, DF, FL}, FP, true);
+	moveGenHelpEdges({UF, DF, FR, FL}, FD, false);
 
-	moveGenHelpEdges({UR, FR, DR, BR}, R);
-	moveGenHelpEdges({UR, BR, DR, FR}, RP);
-	moveGenHelpEdges({UR, DR, BR, FR}, RD);
+	moveGenHelpEdges({UR, FR, DR, BR}, R, false);
+	moveGenHelpEdges({UR, BR, DR, FR}, RP, false);
+	moveGenHelpEdges({UR, DR, BR, FR}, RD, false);
 
-	moveGenHelpEdges({UB, BR, DB, BL}, B);
-	moveGenHelpEdges({UB, BL, DB, BR}, BP);
-	moveGenHelpEdges({UB, DB, BL, BR}, BD);
+	moveGenHelpEdges({UB, BR, DB, BL}, B, true);
+	moveGenHelpEdges({UB, BL, DB, BR}, BP, true);
+	moveGenHelpEdges({UB, DB, BL, BR}, BD, false);
 
-	moveGenHelpEdges({DF, DL, DB, DR}, D);
-	moveGenHelpEdges({DF, DR, DB, DL}, DP);
-	moveGenHelpEdges({DF, DB, DR, DL}, DD);
+	moveGenHelpEdges({DF, DL, DB, DR}, D, false);
+	moveGenHelpEdges({DF, DR, DB, DL}, DP, false);
+	moveGenHelpEdges({DF, DB, DR, DL}, DD, false);
 
 	//creating corner rotation tables
 	moveGenHelpCorners({UBL, UFL, UFR, UBR}, {0, 0, 0, 0}, U);
@@ -620,9 +620,13 @@ void Cube::moveTableGenerate()
 }
 
 //creates edge rotation tables
-void Cube::moveGenHelpEdges(vector<int> faces, int move)
+void Cube::moveGenHelpEdges(vector<int> faces, int move, bool flip)
 {
 	uint8_t flip_val = 0;
+	
+	if (flip) {
+		flip_val = 1;
+	}
 	
 	//records in half_turn if this move is a half turn like F2, R2 etc.
 	if ((move + 1) % 3 == 0) {

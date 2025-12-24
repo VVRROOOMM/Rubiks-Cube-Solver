@@ -3079,6 +3079,8 @@ TEST(cube_d_rotations3, cube_rotations)
 //the following tests take random cubes and a solution and apply the solution and checks that they are solved
 TEST(cube_solutions1, cube_rotations)
 {
+	Cube::initialize();
+	
 	Cube cube("LFRRUDLUBUBBLLLDLLDRLDFRFBDURUFRFRBUFDFUBUBFRDDBBDUFLR");
 	
 	vector<string> solutions = {"R2", "L'", "B'", "U'", "F2", "R'", "U2", "R", "U", "L", "D", "L'", "B2", "U", "F2", "L2", "D2", "F2", "R2", "F2"};

@@ -139,7 +139,7 @@ class Cube
 		
 		void printInfo();
 		
-		static void moveGenHelpEdges(vector<int> faces, int move);
+		static void moveGenHelpEdges(vector<int> faces, int move, bool flip);
 		static void moveGenHelpCorners(vector<int> faces, vector<int> flips, int move);
 		static void moveTableGenerate();
 		static void generateChoose();
