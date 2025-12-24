@@ -44,10 +44,10 @@ Hardware:
 -Build: uses -O3 compiler flag
 
 Results:
--Average solve time: 7.46 ms
--Average solution length: 21.345 moves
--Average phase 1 nodes explored: 166,532
--Average phase 2 nodes explored: 549,245
+-Average solve time: 8.162 ms
+-Average solution length: 23.098 moves
+-Average phase 1 nodes explored: 149,456
+-Average phase 2 nodes explored: 544,844
 
 ---
 

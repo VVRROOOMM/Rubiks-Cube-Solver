@@ -23,7 +23,7 @@ int main() {
 	vector<Cube> cubes;
 	
 	//generate 10,000 cubes using this seed
-	Cube::generateCubes(cubes, 123456, 10000);
+	Cube::generateCubes(cubes, 123456, 1000);
 	
 	//solve them all
 	Solver::solveWrapper(cubes);
