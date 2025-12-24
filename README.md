@@ -16,8 +16,8 @@ This solver focuses on:
 ---
 
 ### Prerequisites
--C++ compiler that supports C++20 (I used g++)
--'make'
+- C++ compiler that supports C++20 (I used g++)
+- 'make'
 
 ---
 
@@ -39,23 +39,23 @@ Solves the cube completely
 
 ### Benchmarks
 Hardware:
--cpu: Intel(R) Core(TM) Ultra 9 185H
--Threads: single threaded
--Build: uses -O3 compiler flag
+- cpu: Intel(R) Core(TM) Ultra 9 185H
+- Threads: single threaded
+- Build: uses -O3 compiler flag
 
 Results:
--Average solve time: 8.162 ms
--Average solution length: 23.098 moves
--Average phase 1 nodes explored: 149,456
--Average phase 2 nodes explored: 544,844
+- Average solve time: 8.162 ms
+- Average solution length: 23.098 moves
+- Average phase 1 nodes explored: 149,456
+- Average phase 2 nodes explored: 544,844
 
 ---
 
 ### Project Structure
--src: all .cpp files
--include: all .h fles
--Makefile
--README.md
+- src: all .cpp files
+- include: all .h fles
+- Makefile
+- README.md
 
 ---
 
@@ -65,3 +65,4 @@ Results:
 - [ ] implement MPI so it can run on a cluster computer
 - [ ] add command line arguments/input
 - [ ] add gui/frontend for insights
+
