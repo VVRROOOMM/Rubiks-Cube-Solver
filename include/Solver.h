@@ -8,6 +8,7 @@
 
 #include "Cube.h"
 #include "Tables.h"
+#include "DBCube.h"
 
 #include <algorithm>
 #include <chrono>
@@ -22,21 +23,16 @@ constexpr size_t NUM_P2_MOVES = 10;
 extern size_t p1MoveGroup[NUM_P1_MOVES];
 extern size_t p2MoveGroup[NUM_P2_MOVES];
 
-//used to track solution length
-extern uint8_t solution_len;
-extern uint8_t solution2_len;
-
-//used to trac exploration expansion
-extern uint64_t p1counter;
-extern uint64_t p2counter;
-
 class Solver
 {
 	public:
 		static void initializeSolver();
 		
-		static bool solveWrapper(vector<Cube>& cubes);
-		static bool solve(vector<int>& solutions, Cube& cube);
+		static bool solveWrapper(vector<Cube>& cubes, vector<DBCube>& cubes_to_log, bool print);
+		static bool solve(vector<int>& solutions, Cube& cube, DBCube& cube_data);
+		
+		static bool solveWrapperSpeed(vector<Cube>& cubes, bool print);
+		static bool solveSpeed(vector<int>& solutions, Cube& cube);
 		
 		static void phase1SolverWrapper(vector<int>& solutions, Cube& cube);
 		static int phase1Solver(vector<int>& solutions, int max_cost, int curr_cost, uint16_t eoKey, uint16_t coKey, uint16_t eKey, size_t prevMove);

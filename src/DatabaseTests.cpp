@@ -3,6 +3,9 @@
 #include <gtest/gtest.h>
 
 #include "Cube.h"
+#include "DBCube.h"
+#include "Solver.h"
+#include "DatabaseLogger.h"
 
 #include <unordered_set>
 #include <queue>
@@ -175,6 +178,60 @@ TEST(cube5ToString, cubeToString)
 		}
 	}
 }*/
+
+TEST(sqlite3_saving_loading, database_tests)
+{
+	Solver::initializeSolver();
+
+	vector<Cube> cubes;
+	vector<DBCube> cubes_to_log;
+	vector<DBCube> cubes_to_solve;
+	random_device rd;
+	int num_solve = 1000;
+	int initial_count = 0;
+	int end_count = 0;
+	
+	//generate the num_solve amount of cubes
+	Cube::generateCubes(cubes, rd(), num_solve);
+	
+	//solve these cubes
+	Solver::solveWrapper(cubes, cubes_to_log, false);
+	
+	DatabaseLogger logger("solve_logs/solves.db", -1);
+	
+	//get the number of cubes with this version -1 for testing
+	initial_count = logger.sqlite3_count_by_version(-1);
+	
+	//log them
+	logger.sqlite3_log_db(cubes_to_log);
+	
+	//this end_count should be exactly num_solve greater then initial_count
+	end_count = logger.sqlite3_count_by_version(-1);
+	
+	ASSERT_EQ(initial_count + num_solve, end_count);
+	
+	//reload the DBcubes to a new vector, these cubes we will load in the initial state, solve them with the solution and check they are solved
+	logger.sqlite3_load_version(cubes_to_solve);
+	
+	for (DBCube& temp : cubes_to_solve) {
+		//rebuild cube
+		Cube cube(temp.get_initial_cube());
+		
+		vector<string> solution = temp.solutionSplitter();
+				
+		for (const string& s : solution) {
+			cube.rotate(s);
+		}
+		
+		ASSERT_TRUE(cube.isSolved());
+	}
+	
+	//this deletes all entries with version -1 (this test)
+	logger.sqlite3_delete_by_version(-1);
+	
+	//if you uncomment the delete and want to keep the data remove this test
+	ASSERT_EQ(logger.sqlite3_count_by_version(-1), 0);
+}
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
