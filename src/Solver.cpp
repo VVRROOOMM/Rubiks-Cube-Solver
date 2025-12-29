@@ -14,8 +14,177 @@ uint8_t solution2_len = 0;
 uint64_t p1counter = 0;
 uint64_t p2counter = 0;
 
+uint64_t curr_p1counter = 0;
+uint64_t curr_p2counter = 0;
+
 //given a vector of cubes we solve all of them and currently records information such as solution length, time to solve etc.
-bool Solver::solveWrapper(vector<Cube>& cubes)
+//cubes_to_log is where the info is stored
+//not this is method is only meant for single threaded code
+bool Solver::solveWrapper(vector<Cube>& cubes, vector<DBCube>& cubes_to_log, bool print)
+{
+	solution_len = 0;
+	solution2_len = 0;
+	vector<int> solutions;
+	int counter = 1;
+	uint64_t total_len = 0;
+	
+	DBCube cube_data;
+	
+	auto start = s_clock::now();
+	auto end = s_clock::now();
+	chrono::duration<double, milli> total_time{0};
+	chrono::duration<double, milli> curr_time{0};
+	
+	for (Cube& cube : cubes) {
+		//this counter stuff is commented out and will give a small speed boost
+		if ((counter % 100) == 0) {
+			cout << "Solving Cube: " << counter << endl;
+		}
+		counter++;
+		//assign solutions with dummy values
+		solutions.assign(50, -1);
+		solution_len = 0;
+		solution2_len = 0;
+		curr_p1counter = 0;
+		curr_p2counter = 0;
+		
+		start = s_clock::now();
+		//calls solve(vector<int>&, Cube&) to solve while timing it
+		bool result = solve(solutions, cube, cube_data);
+		end = s_clock::now();
+		
+		//total_time tracks total time spent solving the vector of cubes
+		curr_time = end - start;
+		total_time += curr_time;
+		
+		//total_len tracks total solution length
+		total_len += solution2_len + solution_len;
+		
+		//these are total nodes seen so far
+		p1counter += curr_p1counter;
+		p2counter += curr_p2counter;
+		
+		//print out node expansions seen for the solved cube
+		//uncomment if you want
+		/*if (print) {
+			cout << curr_p1counter << endl;
+			cout << curr_p2counter << endl;
+		}*/
+		
+		//if the solver runs into an issue it returns false so return false
+		if (!result) {
+			cerr << "exiting solve wrapper" << endl;
+			return false;
+		}
+		
+		//debug statements
+		//cube.printInfo();
+		//cout << endl << endl;
+		
+		//safety check to ensure the cube is solved
+		if (!cube.isSolved()) {
+			cerr << "cube: " << counter - 1 << " wasn't solved" << endl;
+			cube.printInfo();
+			return false;
+		}
+		
+		//sqlite logging
+		cube_data.set_time(curr_time.count() / 1.0);
+		cube_data.set_phase1_nodes(curr_p1counter);
+		cube_data.set_phase2_nodes(curr_p2counter);
+		
+		cubes_to_log.push_back(cube_data);
+	}
+	
+	//these print statements output information: time take to solve cubes, average time per cube, average solution length, nodes explored, and how many nodes per phase explored
+	if (print) {
+		double size = cubes.size() * 1.0;
+		
+		double milliseconds = total_time.count() / 1.0;
+		
+		cout << milliseconds << " miliseconds taken to solve " << cubes.size() << " cubes" << endl;
+		cout << milliseconds / cubes.size() << " milliseconds per solve" << endl;
+		
+		cout << "average solution length: " << (total_len / size) << endl;
+		cout << "average nodes explored: " << ((p1counter + p2counter) / size) << endl;
+		cout << "average p1 nodes explored: " << (p1counter / size) << endl;
+		cout << "average p2 nodes explored: " << (p2counter / size) << endl;
+	}
+	
+	return true;
+}
+
+//solves a given cube, vector<int>& must be filled with -1 and valid size (assumption made by code)
+//cube_data stores relevant information such as the length of the solution, and the initial state
+bool Solver::solve(vector<int>& solutions, Cube& cube, DBCube& cube_data)
+{	
+	//DBCube info
+	string initial = cube.getStringKey();
+	string solution = "";
+	solutions.resize(128);
+
+	//moves in string representation for debug statements
+	vector<string> p1MoveStrings = {"U", "U'", "U2", "L", "L'", "L2", "F", "F'", "F2", "R", "R'", "R2", "B", "B'", "B2", "D", "D'", "D2"};
+	
+	vector<string> p2MoveStrings = {"U", "U'", "U2", "L2", "F2", "R2", "B2", "D", "D'", "D2"};
+	
+	//debug statement
+	//cout << "phase 1" << endl;
+	
+	//calls phase 1 solver
+	phase1SolverWrapper(solutions, cube);
+	
+	//apply the moves to get to phase1 completion
+	for (int i = 0; i < solution_len; i++) {
+		cube.rotate(p1MoveStrings[solutions[i]]);
+		//cout << p1MoveStrings[solutions[i]] << endl;
+		solution += p1MoveStrings[solutions[i]] + " ";
+	}
+	
+	//debug statement
+	//cube.printInfo();
+	
+	//ensures cube has completed phase 1 correctly or else phase 2 will run until stopped (impossible to solve)
+	//tested on a bunch of cubes, uncomment if you want
+	/*if (!cube.phase1Solved()) {
+		cerr << "CUBE HAS NOT SOLVED PHASE 1 CORRECTLY" << endl;
+		return false;
+	}*/
+	
+	//debug statement
+	//cout << "phase 2" << endl;
+	
+	//calls phase 2 solver
+	phase2SolverWrapper(solutions, cube);
+	
+	//apply moves to solve cube
+	for (size_t i = solution_len; i < solution_len + solution2_len; i++) {
+		cube.rotate(p2MoveStrings[solutions[i]]);
+		//cout << p2MoveStrings[solutions[i]] << endl;
+		solution += p2MoveStrings[solutions[i]] + " ";
+	}
+	
+	//ensure the cube is solved
+	//tested on a bunch of cubes, uncomment if you want
+	/*if (!cube.isSolved()) {
+		cube.printInfo();
+		cerr << "CUBE WAS NOT SOLVED CORRECTLY" << endl;
+		return false;
+	}*/
+	
+	//sqlite logging
+	cube_data.set_initial_cube(initial);
+	if (!solution.empty()) {
+		solution.pop_back();
+	}
+	cube_data.set_solution(solution);
+	
+	return true;
+}
+
+//given a vector of cubes we solve all of them, this method DOES NOT store anything for the database but is a pure measure of solving speed
+//would only reccomend using this for single threaded code
+bool Solver::solveWrapperSpeed(vector<Cube>& cubes, bool print)
 {
 	solution_len = 0;
 	solution2_len = 0;
@@ -26,35 +195,50 @@ bool Solver::solveWrapper(vector<Cube>& cubes)
 	auto start = s_clock::now();
 	auto end = s_clock::now();
 	chrono::duration<double, milli> total_time{0};
+	chrono::duration<double, milli> curr_time{0};
 	
 	for (Cube& cube : cubes) {
-		cout << "Solving Cube: " << counter << endl;
+		//counter stuff is commented out for tiny gain in speed when benchmarkingS
+		if ((counter % 100) == 0) {
+			cout << "Solving Cube: " << counter << endl;
+		}
 		counter++;
 		//assign solutions with dummy values
 		solutions.assign(50, -1);
 		solution_len = 0;
 		solution2_len = 0;
+		curr_p1counter = 0;
+		curr_p2counter = 0;
 		
 		start = s_clock::now();
 		//calls solve(vector<int>&, Cube&) to solve while timing it
-		bool result = solve(solutions, cube);
+		bool result = solveSpeed(solutions, cube);
 		end = s_clock::now();
 		
 		//total_time tracks total time spent solving the vector of cubes
-		total_time += end - start;
+		curr_time = end - start;
+		total_time += curr_time;
 		
 		//total_len tracks total solution length
 		total_len += solution2_len + solution_len;
 		
-		//print out node expansions seen so far (doesn't reset)
-		cout << p1counter << endl;
-		cout << p2counter << endl;
+		//tracks total nodes explored
+		p1counter += curr_p1counter;
+		p2counter += curr_p2counter;
+		
+		//print out node expansions for the current cube, only print if you want
+		/*if (print) {
+			cout << curr_p1counter << endl;
+			cout << curr_p2counter << endl;
+		}*/
 		
 		//if the solver runs into an issue it returns false so return false
 		if (!result) {
 			cerr << "exiting solve wrapper" << endl;
 			return false;
 		}
+		
+		//debug things uncomment if you want
 		//cube.printInfo();
 		//cout << endl << endl;
 		
@@ -67,23 +251,25 @@ bool Solver::solveWrapper(vector<Cube>& cubes)
 	}
 	
 	//these print statements output information: time take to solve cubes, average time per cube, average solution length, nodes explored, and how many nodes per phase explored
-	double size = cubes.size() * 1.0;
-	
-	double milliseconds = total_time.count() / 1.0;
-	
-	cout << milliseconds << " miliseconds taken to solve " << cubes.size() << " cubes" << endl;
-	cout << milliseconds / cubes.size() << " milliseconds per solve" << endl;
-	
-	cout << "average solution length: " << (total_len / size) << endl;
-	cout << "average nodes explored: " << ((p1counter + p2counter) / size) << endl;
-	cout << "average p1 nodes explored: " << (p1counter / size) << endl;
-	cout << "average p2 nodes explored: " << (p2counter / size) << endl;
+	if (print) {
+		double size = cubes.size() * 1.0;
+		
+		double milliseconds = total_time.count() / 1.0;
+		
+		cout << milliseconds << " miliseconds taken to solve " << cubes.size() << " cubes" << endl;
+		cout << milliseconds / cubes.size() << " milliseconds per solve" << endl;
+		
+		cout << "average solution length: " << (total_len / size) << endl;
+		cout << "average nodes explored: " << ((p1counter + p2counter) / size) << endl;
+		cout << "average p1 nodes explored: " << (p1counter / size) << endl;
+		cout << "average p2 nodes explored: " << (p2counter / size) << endl;
+	}
 	
 	return true;
 }
 
-//solves a given cube, vector<int>& must be filled with -1 and valid size (assumption made by code)
-bool Solver::solve(vector<int>& solutions, Cube& cube)
+//solves a given cube, vector<int>& must be filled with -1 and valid size (assumption made by code
+bool Solver::solveSpeed(vector<int>& solutions, Cube& cube)
 {	
 	//moves in string representation for debug statements
 	vector<string> p1MoveStrings = {"U", "U'", "U2", "L", "L'", "L2", "F", "F'", "F2", "R", "R'", "R2", "B", "B'", "B2", "D", "D'", "D2"};
@@ -106,10 +292,11 @@ bool Solver::solve(vector<int>& solutions, Cube& cube)
 	//cube.printInfo();
 	
 	//ensures cube has completed phase 1 correctly or else phase 2 will run until stopped (impossible to solve)
-	if (!cube.phase1Solved()) {
+	//tested on a bunch of cubes so I will comment it out, uncomment it out if you want
+	/*if (!cube.phase1Solved()) {
 		cerr << "CUBE HAS NOT SOLVED PHASE 1 CORRECTLY" << endl;
 		return false;
-	}
+	}*/
 	
 	//debug statement
 	//cout << "phase 2" << endl;
@@ -121,15 +308,15 @@ bool Solver::solve(vector<int>& solutions, Cube& cube)
 	for (size_t i = solution_len; i < solution_len + solution2_len; i++) {
 		cube.rotate(p2MoveStrings[solutions[i]]);
 		//cout << p2MoveStrings[solutions[i]] << endl;
-		//cout << cube.p2elIndex() << " " << cube.p2clIndex() << " " << cube.p2eSliceIndex() << endl;
 	}
 	
 	//ensure the cube is solved
-	if (!cube.isSolved()) {
+	//passed a bunch of tests so I commented it out, uncomment it out if you want.
+	/*if (!cube.isSolved()) {
 		cube.printInfo();
 		cerr << "CUBE WAS NOT SOLVED CORRECTLY" << endl;
 		return false;
-	}
+	}*/
 	
 	return true;
 }
@@ -161,7 +348,7 @@ void Solver::phase1SolverWrapper(vector<int>& solutions, Cube& cube)
 int Solver::phase1Solver(vector<int>& solutions, int max_cost, int curr_cost, uint16_t eoKey, uint16_t coKey, uint16_t eKey, size_t prevMove)
 {
 	//update node expansion
-	p1counter++;
+	curr_p1counter++;
 
 	//if we're solved phase 1 leave
 	if (Cube::phase1Solved(eoKey, coKey, eKey)) {
@@ -257,7 +444,7 @@ void Solver::phase2SolverWrapper(vector<int>& solutions, Cube& cube)
 int Solver::phase2Solver(vector<int>& solutions, int max_cost, int curr_cost, uint16_t elKey, uint16_t clKey, uint8_t eKey, size_t prevMove)
 {
 	//update node expansion
-	p2counter++;
+	curr_p2counter++;
 	
 	//if the coordinates are the solved coordinates leave
 	if (elKey == 0 && clKey == 0 && eKey == 0) {
