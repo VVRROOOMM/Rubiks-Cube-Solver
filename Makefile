@@ -12,17 +12,22 @@ COORDS_TEST_TARGET = CoordsTests
 ROTATION_TEST_TARGET = RotateTests
 DB_RELATED_TEST_TARGET = DatabaseTests
 
-OBJECTS = $(OBJECT_PATH)/Cube.o $(OBJECT_PATH)/Tables.o $(OBJECT_PATH)/Solver.o $(OBJECT_PATH)/Main.o $(OBJECT_PATH)/DBCube.o $(OBJECT_PATH)/DatabaseLogger.o
+OBJECTS = $(OBJECT_PATH)/Cube.o $(OBJECT_PATH)/Tables.o $(OBJECT_PATH)/Solver.o $(OBJECT_PATH)/Main.o $(OBJECT_PATH)/DBCube.o $(OBJECT_PATH)/DatabaseLogger.o $(OBJECT_PATH)/MultiThreadSolver.o
 
 COORDS_TEST_OBJECT = $(OBJECT_PATH)/Cube.o $(OBJECT_PATH)/Tables.o $(OBJECT_PATH)/CoordsTests.o
 ROTATION_TEST_OBJECT = $(OBJECT_PATH)/Cube.o $(OBJECT_PATH)/Tables.o $(OBJECT_PATH)/RotateTests.o
-DB_RELATED_TEST_OBJECT = $(OBJECT_PATH)/Cube.o $(OBJECT_PATH)/Tables.o $(OBJECT_PATH)/Solver.o $(OBJECT_PATH)/DatabaseTests.o $(OBJECT_PATH)/DBCube.o $(OBJECT_PATH)/DatabaseLogger.o
+DB_RELATED_TEST_OBJECT = $(OBJECT_PATH)/Cube.o $(OBJECT_PATH)/Tables.o $(OBJECT_PATH)/Solver.o $(OBJECT_PATH)/DatabaseTests.o $(OBJECT_PATH)/DBCube.o $(OBJECT_PATH)/DatabaseLogger.o $(OBJECT_PATH)/MultiThreadSolver.o $(OBJECT_PATH)/Main_test.o
 
 GTEST_INC = /c/cpp_libraries/googletest/googletest/include
 GTEST_LIB = /c/cpp_libraries/googletest/build/lib
 GTEST_FLAGS = -I$(GTEST_INC) -L$(GTEST_LIB) -lgtest -lgtest_main -pthread
 
 SQLITE_FLAGS = -lsqlite3
+
+MAIN_TEST_OBJ = $(OBJECT_PATH)/Main_test.o
+
+$(OBJECT_PATH)/Main_test.o: Main.cpp | $(OBJECT_PATH)
+	$(CXX) $(CXXFLAGS) -DUNIT_TEST -c $< -o $@
 
 $(OBJECT_PATH):
 	mkdir -p $(OBJECT_PATH)
@@ -64,6 +69,8 @@ test_database: $(BIN_PATH)/$(DB_RELATED_TEST_TARGET) | $(BIN_PATH)
 
 $(OBJECT_PATH)/%Tests.o: %Tests.cpp | $(OBJECT_PATH)
 	$(CXX) $(CXXFLAGS) -DUNIT_TEST $(GTEST_FLAGS) -c $< -o $@
+
+
 
 clean:
 	rm -f $(OBJECT_PATH)/*.o $(BIN_PATH)/$(TARGET) $(BIN_PATH)/$(COORDS_TEST_TARGET) $(BIN_PATH)/$(ROTATION_TEST_TARGET) $(BIN_PATH)/$(DB_RELATED_TEST_TARGET) $(TABLE_PATH)/*.bin

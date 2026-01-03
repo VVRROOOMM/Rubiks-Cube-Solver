@@ -4,8 +4,8 @@ using namespace std;
 
 using s_clock = chrono::high_resolution_clock;
 
-size_t p1MoveGroup[NUM_P1_MOVES] = {0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5};
-size_t p2MoveGroup[NUM_P2_MOVES] = {0, 0, 0, 1, 2, 3, 4, 5, 5, 5};
+const size_t p1MoveGroup[NUM_P1_MOVES] = {0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5};
+const size_t p2MoveGroup[NUM_P2_MOVES] = {0, 0, 0, 1, 2, 3, 4, 5, 5, 5};
 
 uint8_t solution_len = 0;
 uint8_t solution2_len = 0;
@@ -35,14 +35,15 @@ bool Solver::solveWrapper(vector<Cube>& cubes, vector<DBCube>& cubes_to_log, boo
 	chrono::duration<double, milli> total_time{0};
 	chrono::duration<double, milli> curr_time{0};
 	
+	//assign solutions with dummy values
+	solutions.assign(50, -1);
+	
 	for (Cube& cube : cubes) {
 		//this counter stuff is commented out and will give a small speed boost
 		if ((counter % 100) == 0) {
 			cout << "Solving Cube: " << counter << endl;
 		}
 		counter++;
-		//assign solutions with dummy values
-		solutions.assign(50, -1);
 		solution_len = 0;
 		solution2_len = 0;
 		curr_p1counter = 0;
@@ -182,6 +183,32 @@ bool Solver::solve(vector<int>& solutions, Cube& cube, DBCube& cube_data)
 	return true;
 }
 
+//given a cube, solve it and record the results in DBCube result
+void Solver::solveDBCubeTest(Cube& cube, DBCube& result)
+{
+	solution_len = 0;
+	solution2_len = 0;
+	curr_p1counter = 0;
+	curr_p2counter = 0;
+	vector<int> solutions;
+	
+	auto start = s_clock::now();
+	auto end = s_clock::now();
+	chrono::duration<double, milli> curr_time{0};
+	
+	solutions.assign(50, -1);
+	
+	start = s_clock::now();
+	solve(solutions, cube, result);
+	end = s_clock::now();
+	
+	curr_time = end - start;
+	
+	result.set_time(curr_time.count() / 1.0);
+	result.set_phase1_nodes(curr_p1counter);
+	result.set_phase2_nodes(curr_p2counter);
+}
+
 //given a vector of cubes we solve all of them, this method DOES NOT store anything for the database but is a pure measure of solving speed
 //would only reccomend using this for single threaded code
 bool Solver::solveWrapperSpeed(vector<Cube>& cubes, bool print)
@@ -197,14 +224,15 @@ bool Solver::solveWrapperSpeed(vector<Cube>& cubes, bool print)
 	chrono::duration<double, milli> total_time{0};
 	chrono::duration<double, milli> curr_time{0};
 	
+	//assign solutions with dummy values
+	solutions.assign(50, -1);
+	
 	for (Cube& cube : cubes) {
 		//counter stuff is commented out for tiny gain in speed when benchmarkingS
 		if ((counter % 100) == 0) {
 			cout << "Solving Cube: " << counter << endl;
 		}
 		counter++;
-		//assign solutions with dummy values
-		solutions.assign(50, -1);
 		solution_len = 0;
 		solution2_len = 0;
 		curr_p1counter = 0;

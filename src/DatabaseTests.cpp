@@ -6,6 +6,8 @@
 #include "DBCube.h"
 #include "Solver.h"
 #include "DatabaseLogger.h"
+#include "MultiThreadSolver.h"
+#include "Main.h"
 
 #include <unordered_set>
 #include <queue>
@@ -53,6 +55,34 @@ namespace
 				cerr << "corner " << i << " do not match orientations. Cube1: " << static_cast<int>(co1[i]) << " , Cube2: " << static_cast<int>(co2[i]) << endl;
 				result = false;
 			}
+		}
+		
+		return result;
+	}
+	
+	//checks database entries are the same (excluding solution time)
+	bool areEquals(const DBCube& cube1, const DBCube& cube2)
+	{
+		bool result = true;
+		
+		if (cube1.get_initial_cube() != cube2.get_initial_cube()) {
+			result = false;
+		}
+		else if (cube1.get_solution() != cube2.get_solution()) {
+			result = false;
+		}
+		else if (cube1.get_phase1_nodes() != cube2.get_phase1_nodes()) {
+			result = false;
+		}
+		else if (cube1.get_phase2_nodes() != cube2.get_phase2_nodes()) {
+			result =  false;
+		}
+		
+		if (!result) {
+			cout << "cube1: " << cube1.get_initial_cube() << " cube2: " << cube2.get_initial_cube() << endl;
+			cout << "cube1: " << cube1.get_solution() << " cube2: " << cube2.get_solution() << endl;
+			cout << "cube1: " << cube1.get_phase1_nodes() << " cube2: " << cube2.get_phase1_nodes() << endl;
+			cout << "cube1: " << cube1.get_phase2_nodes() << " cube2: " << cube2.get_phase2_nodes() << endl;
 		}
 		
 		return result;
@@ -179,34 +209,26 @@ TEST(cube5ToString, cubeToString)
 	}
 }*/
 
-TEST(sqlite3_saving_loading, database_tests)
+TEST(sqlite3_single_thread_solving_loading, database_tests)
 {
 	Solver::initializeSolver();
 
-	vector<Cube> cubes;
-	vector<DBCube> cubes_to_log;
 	vector<DBCube> cubes_to_solve;
-	random_device rd;
 	int num_solve = 1000;
 	int initial_count = 0;
 	int end_count = 0;
 	
-	//generate the num_solve amount of cubes
-	Cube::generateCubes(cubes, rd(), num_solve);
+	{
+		DatabaseLogger logger("solve_logs/solves.db", -1.1);
+		//get the number of cubes with this version -1 for testing
+		initial_count = logger.sqlite3_count_by_version(-1.1);
+	}
 	
-	//solve these cubes
-	Solver::solveWrapper(cubes, cubes_to_log, false);
+	Main::singleThreadLog(num_solve, false, -1.1, false);
 	
-	DatabaseLogger logger("solve_logs/solves.db", -1);
-	
-	//get the number of cubes with this version -1 for testing
-	initial_count = logger.sqlite3_count_by_version(-1);
-	
-	//log them
-	logger.sqlite3_log_db(cubes_to_log);
-	
+	DatabaseLogger logger("solve_logs/solves.db", -1.1);
 	//this end_count should be exactly num_solve greater then initial_count
-	end_count = logger.sqlite3_count_by_version(-1);
+	end_count = logger.sqlite3_count_by_version(-1.1);
 	
 	ASSERT_EQ(initial_count + num_solve, end_count);
 	
@@ -227,13 +249,84 @@ TEST(sqlite3_saving_loading, database_tests)
 	}
 	
 	//this deletes all entries with version -1 (this test)
-	logger.sqlite3_delete_by_version(-1);
+	logger.sqlite3_delete_by_version(-1.1);
 	
 	//if you uncomment the delete and want to keep the data remove this test
-	ASSERT_EQ(logger.sqlite3_count_by_version(-1), 0);
+	ASSERT_EQ(logger.sqlite3_count_by_version(-1.1), 0);
 }
 
-int main(int argc, char **argv) {
+//this test ensures that multi threaded code results in the same data generation as single threaded code
+//then ensures the number of logged cubes increased by the right amount
+TEST(sqlite3_multi_thread_solving_loading, database_tests)
+{
+	MultiThreadSolver::initializeSolver();
+	
+
+	vector<DBCube> cubes_to_solve;
+	//if you do 10,000, we solve 190,000 cubes which is relatively fast, but the actual resolving single threaded took 40 minutes
+	//1000 cubes at each stage solved: 19,000 cubes took 3 minutes
+	//int num_solve = 10000;
+	int num_solve = 100;
+	int initial_count = 0;
+	int end_count = 0;
+	int lim = 19;
+	int counter = 0;
+	
+	DBCube single_thread_data;
+	Cube cube;
+	
+	{
+		DatabaseLogger logger("solve_logs/solves.db", -1.2);
+		//get the number of cubes with this version -1.2 for testing
+		initial_count = logger.sqlite3_count_by_version(-1.2);
+	}
+		
+	for (int i = 1; i <= lim; i++) {
+		Main::multiThreadLogger(num_solve, false, -1.2, i);
+	}
+	
+	DatabaseLogger logger("solve_logs/solves.db", -1.2);
+	//this end_count should be exactly num_solve greater then initial_count
+	end_count = logger.sqlite3_count_by_version(-1.2);
+	
+	ASSERT_EQ(initial_count + num_solve * lim, end_count);
+	
+	//reload the DBcubes to a new vector, these cubes we will load in the initial state, solve them with the solution and check they are solved
+	logger.sqlite3_load_version(cubes_to_solve);
+	
+	for (DBCube& temp : cubes_to_solve) {
+		counter++;
+		if ((counter % 1000) == 0) {
+			cout << counter << endl;
+		}
+		//rebuild cube
+		cube.stringToCube(temp.get_initial_cube());
+		
+		vector<string> solution = temp.solutionSplitter();
+				
+		for (const string& s : solution) {
+			cube.rotate(s);
+		}
+		
+		ASSERT_TRUE(cube.isSolved());
+		
+		cube.stringToCube(temp.get_initial_cube());
+		
+		Solver::solveDBCubeTest(cube, single_thread_data);
+		
+		ASSERT_TRUE(areEquals(single_thread_data, temp));
+	}
+	
+	//this deletes all entries with version -1.2 (this test)
+	logger.sqlite3_delete_by_version(-1.2);
+	
+	//if you uncomment the delete and want to keep the data remove this test
+	ASSERT_EQ(logger.sqlite3_count_by_version(-1.2), 0);
+	
+	cout << "done test" << endl;
+}
+
+int main(int argc, char **argv) {	
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

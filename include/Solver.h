@@ -3,6 +3,9 @@
 //currently implements Kociemba's 2 phase algorithm via IDA* and heuristics tables of 
 //edge orientation combined with corner orientation and phase 1 e slice locations and
 //corner locations combined with e slice locations and edge locations combined with e slice locations
+//note this is intended for single threaded use cases, as solution length and node expansions are globl, this maximizes speed rather then passing in 4 arguments by reference
+//if you do use it multi threaded it will not work and possibly crash
+//for multi threaded usage look at MultiThreadSolver.cpp and MultiThreadSolver.h
 
 #pragma once
 
@@ -20,16 +23,17 @@ constexpr size_t NUM_P1_MOVES = 18;
 constexpr size_t NUM_P2_MOVES = 10;
 
 //these will be used for pruning during IDA*
-extern size_t p1MoveGroup[NUM_P1_MOVES];
-extern size_t p2MoveGroup[NUM_P2_MOVES];
+const extern size_t p1MoveGroup[NUM_P1_MOVES];
+const extern size_t p2MoveGroup[NUM_P2_MOVES];
 
 class Solver
 {
 	public:
 		static void initializeSolver();
-		
+				
 		static bool solveWrapper(vector<Cube>& cubes, vector<DBCube>& cubes_to_log, bool print);
 		static bool solve(vector<int>& solutions, Cube& cube, DBCube& cube_data);
+		static void solveDBCubeTest(Cube& cube, DBCube& result);
 		
 		static bool solveWrapperSpeed(vector<Cube>& cubes, bool print);
 		static bool solveSpeed(vector<int>& solutions, Cube& cube);
