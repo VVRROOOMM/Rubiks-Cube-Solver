@@ -1,7 +1,13 @@
+//this handles the database logging
+//only create one version per database or else you may lock the sqlite database
+
 #pragma once
 
 #include <vector>
 #include <string>
+#include <queue>
+#include <mutex>
+#include <atomic>
 
 #include "DBCube.h"
 
@@ -21,6 +27,7 @@ class DatabaseLogger
 	
 		int sqlite3_log_db(vector<DBCube>& cubes);
 		int sqlite3_log_db(DBCube& cube);
+		int sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic<bool>& end_program);
 		
 		void sqlite3_load(vector<DBCube>& data, string& query);
 		void sqlite3_load_version(vector<DBCube>& data);
