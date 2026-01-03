@@ -219,16 +219,16 @@ TEST(sqlite3_single_thread_solving_loading, database_tests)
 	int end_count = 0;
 	
 	{
-		DatabaseLogger logger("solve_logs/solves.db", -1);
+		DatabaseLogger logger("solve_logs/solves.db", -1.1);
 		//get the number of cubes with this version -1 for testing
-		initial_count = logger.sqlite3_count_by_version(-1);
+		initial_count = logger.sqlite3_count_by_version(-1.1);
 	}
 	
-	Main::singleThreadLog(num_solve, false, -1, false);
+	Main::singleThreadLog(num_solve, false, -1.1, false);
 	
-	DatabaseLogger logger("solve_logs/solves.db", -1);
+	DatabaseLogger logger("solve_logs/solves.db", -1.1);
 	//this end_count should be exactly num_solve greater then initial_count
-	end_count = logger.sqlite3_count_by_version(-1);
+	end_count = logger.sqlite3_count_by_version(-1.1);
 	
 	ASSERT_EQ(initial_count + num_solve, end_count);
 	
@@ -249,10 +249,10 @@ TEST(sqlite3_single_thread_solving_loading, database_tests)
 	}
 	
 	//this deletes all entries with version -1 (this test)
-	logger.sqlite3_delete_by_version(-1);
+	logger.sqlite3_delete_by_version(-1.1);
 	
 	//if you uncomment the delete and want to keep the data remove this test
-	ASSERT_EQ(logger.sqlite3_count_by_version(-1), 0);
+	ASSERT_EQ(logger.sqlite3_count_by_version(-1.1), 0);
 }
 
 //this test ensures that multi threaded code results in the same data generation as single threaded code
@@ -276,18 +276,18 @@ TEST(sqlite3_multi_thread_solving_loading, database_tests)
 	Cube cube;
 	
 	{
-		DatabaseLogger logger("solve_logs/solves.db", -1);
-		//get the number of cubes with this version -1 for testing
-		initial_count = logger.sqlite3_count_by_version(-1);
+		DatabaseLogger logger("solve_logs/solves.db", -1.2);
+		//get the number of cubes with this version -1.2 for testing
+		initial_count = logger.sqlite3_count_by_version(-1.2);
 	}
 		
 	for (int i = 1; i <= lim; i++) {
-		Main::multiThreadLogger(num_solve, false, -1, i);
+		Main::multiThreadLogger(num_solve, false, -1.2, i);
 	}
 	
-	DatabaseLogger logger("solve_logs/solves.db", -1);
+	DatabaseLogger logger("solve_logs/solves.db", -1.2);
 	//this end_count should be exactly num_solve greater then initial_count
-	end_count = logger.sqlite3_count_by_version(-1);
+	end_count = logger.sqlite3_count_by_version(-1.2);
 	
 	ASSERT_EQ(initial_count + num_solve * lim, end_count);
 	
@@ -317,11 +317,11 @@ TEST(sqlite3_multi_thread_solving_loading, database_tests)
 		ASSERT_TRUE(areEquals(single_thread_data, temp));
 	}
 	
-	//this deletes all entries with version -1 (this test)
-	logger.sqlite3_delete_by_version(-1);
+	//this deletes all entries with version -1.2 (this test)
+	logger.sqlite3_delete_by_version(-1.2);
 	
 	//if you uncomment the delete and want to keep the data remove this test
-	ASSERT_EQ(logger.sqlite3_count_by_version(-1), 0);
+	ASSERT_EQ(logger.sqlite3_count_by_version(-1.2), 0);
 	
 	cout << "done test" << endl;
 }

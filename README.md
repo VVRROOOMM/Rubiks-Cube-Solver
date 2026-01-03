@@ -61,20 +61,20 @@ Hardware:
 - Build: uses -O3 compiler flag
 
 Results (seed 123456, on 1,000 cubes averaged over 3 runs after running once) without logging:
-- Average solve time: 6.479 ms
+- Average solve time: 3.8870 ms
 - Average solution length: 23.098 moves
 - Average phase 1 nodes explored: 149,456
 - Average phase 2 nodes explored: 544,844
 
 Results (seed 123456, on 1,000 cubes averaged over 3 runs after running once) with logging:
-- Total solve and log time: 6.6851 seconds
-- Average solve and log time per cube: 6.685 ms
+- Total solve and log time: 3.9357 seconds
+- Average solve and log time per cube: 3.9357 ms
 
 Multi Threading Results:
 - the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calulation
 - the 3rd column labelled measured 1 x 100,000 cube run means that I had that number of threads scrambling and solving 100,000 cubes and recorded the total time to scramble, solve and log the information
 
-| number of threads | average over 4 x 25,000 cube runs | measured over 1 x 100,000 cube runs|
+| number of threads | average over 4 x 25,000 cube runs (cubes per second) | measured over 1 x 100,000 cube runs (cubes per second)|
 |:-----------------:|:---------------------------------:|:----------------------------------:|
 | 1 | 205.14 | 200.65 |
 | 2 | 389.94 | 373.19 |

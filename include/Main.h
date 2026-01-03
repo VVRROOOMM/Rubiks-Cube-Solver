@@ -18,7 +18,7 @@ using namespace std;
 
 class Main {
 	public:
-		static void multiThreadLogger(int num_cubes, bool benchmark, int version, int num_threads);
-		static void singleThreadLog(int num_cubes, bool benchmark, int version, bool print);
+		static void multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads);
+		static void singleThreadLog(int num_cubes, bool benchmark, double version, bool print);
 		static void speedRun(int seed, int num_cubes);
 };

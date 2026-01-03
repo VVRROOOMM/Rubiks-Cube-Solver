@@ -1,9 +1,3 @@
-/*
-quick check to ensure cubes don't show up multiple times that many times
-comment stuff
-update benchmarks
-*/
-
 #include <iostream>
 
 #include "Main.h"
@@ -16,7 +10,7 @@ using namespace std;
 
 using s_clock = chrono::high_resolution_clock;
 
-void Main::multiThreadLogger(int num_cubes, bool benchmark, int version, int num_threads)
+void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads)
 {	
 	auto start = s_clock::now();
 	auto end = s_clock::now();
@@ -67,7 +61,7 @@ void Main::multiThreadLogger(int num_cubes, bool benchmark, int version, int num
 	cout << "done running " << num_threads << " threads" << endl;
 }
 
-void Main::singleThreadLog(int num_cubes, bool benchmark, int version, bool print)
+void Main::singleThreadLog(int num_cubes, bool benchmark, double version, bool print)
 {
 	//note that the benchmarks also used 123456 as the specific seed as .the speed test used the same speed and this gives a good baseline
 	//to switch to benchmarking comment out the generateCubes line with the random seed and uncomment out the set seed, start, end and duration related lines
@@ -122,7 +116,8 @@ void Main::speedRun(int seed, int num_cubes)
 
 #ifndef UNIT_TEST
 int main(int argc, char* argv[]) {
-	int version = 1;
+	double single_version = 1.1;
+	double multi_version = 1.2;
 	
 	/*
 	these are what modes to run in
@@ -220,30 +215,29 @@ int main(int argc, char* argv[]) {
 		Main::speedRun(123456, num_cubes);
 	}
 	else if (option == 2) {
-		Main::singleThreadLog(num_cubes, true, version, false);
+		Main::singleThreadLog(num_cubes, true, single_version, false);
 	}
 	else if (option == 3) {
-		for (int r = 0; r < 4; r++) {
+		//this code was to generate the data for benchmarking multi threaded code
+		/*for (int r = 0; r < 4; r++) {
 			for (int i = 1; i <= 19; i++) {
-				Main::multiThreadLogger(25000, true, version, i);
+				Main::multiThreadLogger(25000, true, multi_version, i);
 				cout << endl;
 			}
 			cout << endl;
 		}
 		
 		for (int i = 1; i <= 19; i++) {
-			Main::multiThreadLogger(100000, true, version, i);
+			Main::multiThreadLogger(100000, true, multi_version, i);
 			cout << endl;
-		}
+		}*/
 		
-		//Main::multiThreadLogger(num_cubes, true, version, num_threads);
+		Main::multiThreadLogger(num_cubes, true, multi_version, num_threads);
 	}
 	else {
 		cout << "invalid option given" << endl;
 		return 0;
 	}
-	
-	cout << "program done" << endl;
 	
 	return 0;
 }

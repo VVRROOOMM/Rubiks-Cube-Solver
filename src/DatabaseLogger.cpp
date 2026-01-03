@@ -5,7 +5,7 @@
 using namespace std;
 
 //creates a database logger object
-DatabaseLogger::DatabaseLogger(const string& path, int version)
+DatabaseLogger::DatabaseLogger(const string& path, double version)
 {	
 	int result = sqlite3_open_v2(path.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 
@@ -14,7 +14,7 @@ DatabaseLogger::DatabaseLogger(const string& path, int version)
 		return;
 	}
 
-	const char* create_table = "CREATE TABLE IF NOT EXISTS solves (solve_id INTEGER PRIMARY KEY AUTOINCREMENT, initial TEXT NOT NULL, solution TEXT NOT NULL, solve_time REAL NOT NULL, version INTEGER NOT NULL, p1Nodes INTEGER NOT NULL, p2Nodes INTEGER NOT NULL);";
+	const char* create_table = "CREATE TABLE IF NOT EXISTS solves (solve_id INTEGER PRIMARY KEY AUTOINCREMENT, initial TEXT NOT NULL, solution TEXT NOT NULL, solve_time REAL NOT NULL, version REAL NOT NULL, p1Nodes INTEGER NOT NULL, p2Nodes INTEGER NOT NULL);";
 
 	result = sqlite3_exec(db, create_table, nullptr, nullptr, nullptr);
 	
@@ -66,7 +66,7 @@ int DatabaseLogger::sqlite3_log_db(DBCube& cube)
 	sqlite3_bind_text(stmt, 1, cube.get_initial_cube().c_str(), -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmt, 2, cube.get_solution().c_str(), -1, SQLITE_TRANSIENT);
 	sqlite3_bind_double(stmt, 3, cube.get_time());
-	sqlite3_bind_int(stmt, 4, version);
+	sqlite3_bind_double(stmt, 4, version);
 	sqlite3_bind_int(stmt, 5, cube.get_phase1_nodes());
 	sqlite3_bind_int(stmt, 6, cube.get_phase2_nodes());
 	
@@ -155,7 +155,7 @@ void DatabaseLogger::sqlite3_load(vector<DBCube>& data, string& query)
 
 //deletes based on version BE CAREFUL USING THIS
 //this is mainly used to delete the test data as it's repeated for some test cases
-void DatabaseLogger::sqlite3_delete_by_version(int version)
+void DatabaseLogger::sqlite3_delete_by_version(double version)
 {
 	string delete_by_version = "DELETE FROM solves WHERE version = " + to_string(version) + ";";
 	
@@ -165,7 +165,7 @@ void DatabaseLogger::sqlite3_delete_by_version(int version)
 }
 
 //returns the number of DB entries that follow a given version, not the version of the logger class
-int DatabaseLogger::sqlite3_count_by_version(int given_version)
+int DatabaseLogger::sqlite3_count_by_version(double given_version)
 {
 	int count = 0;
 	string count_by_version = "SELECT COUNT(*) FROM solves WHERE version = " + to_string(given_version) + ";";
