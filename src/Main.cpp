@@ -86,7 +86,7 @@ void Main::singleThreadLog(int num_cubes, bool benchmark, double version, bool p
 
 		elapsed_time = end - start;
 
-		cout << "time taken to log " << num_cubes << " cubes is: " << elapsed_time.count() << endl;
+		cout << "time taken to log " << num_cubes << " cubes is: " << elapsed_time.count() << " ms" << endl;
 	}
 	else {
 		//generate num_cubes cubes using a random seed

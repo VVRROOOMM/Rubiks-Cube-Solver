@@ -269,7 +269,8 @@ TEST(sqlite3_multi_thread_solving_loading, database_tests)
 	int num_solve = 100;
 	int initial_count = 0;
 	int end_count = 0;
-	int lim = 19;
+	//this may break if you have 1 single thread or this returns 0
+	int lim = (int) (thread::hardware_concurrency() - 2);
 	int counter = 0;
 	
 	DBCube single_thread_data;

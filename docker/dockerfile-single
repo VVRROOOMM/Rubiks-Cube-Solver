@@ -1,5 +1,5 @@
 # the intended target is a raspbery pi 5
-FROM arm64v8/ubuntu:22.04 AS builder
+FROM ubuntu:22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -20,11 +20,11 @@ COPY tables/ tables/
 # the single program defined in the Makefile
 RUN make single
 
-FROM arm64v8/ubuntu:22.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y libsqlite3-0 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libsqlite3-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
