@@ -100,6 +100,7 @@ Multi Threading Results:
 
 ### Project Structure
 - bin: all executables are compiled here
+- docker: docker images
 - include: all .h fles
 - obj: all .o files
 - solve_logs: sqlite3 database of all solves
@@ -107,6 +108,7 @@ Multi Threading Results:
 - tables: tables used by the solver, heuristics and transition
 - Makefile
 - README.md
+- .dockerignore
 
 ---
 
@@ -114,7 +116,6 @@ Multi Threading Results:
 - [x] add SQLite to log results
 - [x] add command line arguments/input
 - [x] add multi threading for solving cubes
-- [ ] create docker images for portability and consistency
+- [x] create docker images for portability and consistency
 - [ ] implement MPI so it can run on a cluster computer
-- [ ] add gui/frontend for insights
 
