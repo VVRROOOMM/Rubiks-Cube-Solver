@@ -219,8 +219,11 @@ int main(int argc, char* argv[]) {
 	}
 	else if (option == 3) {
 		//this code was to generate the data for benchmarking multi threaded code
-		/*for (int r = 0; r < 4; r++) {
-			for (int i = 1; i <= 19; i++) {
+		//r is the number of runs to complete this does 4 runs of 25,000 cubes
+		//the thread_max may fail if you have 1 thread or c++ can't determine the number of cores you have
+		/*int thread_max = (int) (thread::hardware_concurrency() - 2);
+		for (int r = 0; r < 4; r++) {
+			for (int i = 1; i <= thread_max; i++) {
 				Main::multiThreadLogger(25000, true, multi_version, i);
 				cout << endl;
 			}
