@@ -1,0 +1,12 @@
+#builds
+bin/
+obj/
+*.o
+*.exe
+
+#database and logs
+solve_logs/
+
+#git
+.git
+.gitignore
