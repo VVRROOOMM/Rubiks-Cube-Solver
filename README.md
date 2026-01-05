@@ -3,8 +3,8 @@ A fast lightweight Rubik's Cube Solver that implements Kociemba's two phase algo
 
 This solver focuses on:
 - Performance
-- Correctness
-- Simplicity (the solver engine has zero external dependencies)
+- Correctness (extensive google tests)
+- Simplicity (the solver itself has zero external dependencies)
 - Optional SQLite logging module
 
 ---
@@ -15,6 +15,7 @@ This solver focuses on:
 - Simple Makefile to build ("make run")
 - SQLite database that stores initial cubes, solutions, time to solve, and nodes explored
 - Allows the user to specify the number of threads and how many total cubes they want to solve
+- Docker file so you can build images for linux and windows
 
 ---
 
@@ -22,6 +23,8 @@ This solver focuses on:
 - C++ compiler that supports C++20 (I used g++)
 - 'make'
 - sqlite3 version 3.50.3 (version that I'm using)
+- GoogleTest for testing
+- Docker to build or run docker images
 
 ---
 
@@ -48,33 +51,48 @@ Solves the cube completely
 
 ### Hardware
 
-Hardware:
+Laptop Hardware:
 - cpu: Intel(R) Core(TM) Ultra 9 185H
 - 6 performance cores (hyper threading is on so 12 logical performance threads): 5.1 GHz
 - 8 efficient cores: 3.8 GHz
 - 2 low power efficient cores: 2.3 GHz
 - RAM: 32 GB @ 6400 MT/s
 
+Raspberry pi 5 Hardware:
+- cpu: Broadcom BCM2712 2.4 GHz quad-core
+- 4 cores: 2.4 GHz
+- RAM: 16 GB
+
 ---
 
 ### Benchmarks
 - Build: uses -O3 compiler flag
 
-Results (seed 123456, on 1,000 cubes averaged over 3 runs after running once) without logging:
+Laptop Results (seed 123456, on 1,000 cubes averaged over 3 runs after running once) without logging:
 - Average solve time: 3.8870 ms
 - Average solution length: 23.098 moves
 - Average phase 1 nodes explored: 149,456
 - Average phase 2 nodes explored: 544,844
 
-Results (seed 123456, on 1,000 cubes averaged over 3 runs after running once) with logging:
+Raspberry pi 5 Results (seed 123456, on 1,000 cubes averaged over 3 runs after running once) without logging:
+- Average solve time: 12.2766 ms
+- Average solution length: 23.098 moves
+- Average phase 1 nodes explored: 149,456
+- Average phase 2 nodes explored: 544,844
+
+Laptop Results (seed 123456, on 1,000 cubes averaged over 3 runs after running once) with logging:
 - Total solve and log time: 3.9357 seconds
 - Average solve and log time per cube: 3.9357 ms
 
-Multi Threading Results:
+Raspberry pi 5 Results (seed 123456, on 1,000 cubes averaged over 3 runs after running once) with logging:
+- Total solve and log time: 12.2677 seconds
+- Average solve and log time per cube: 12.2677 ms
+
+Laptop Multi Threading Results:
 - the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calulation
 - the 3rd column labelled measured 1 x 100,000 cube run means that I had that number of threads scrambling and solving 100,000 cubes and recorded the total time to scramble, solve and log the information
 
-| number of threads | average over 4 x 25,000 cube runs (cubes per second) | measured over 1 x 100,000 cube runs (cubes per second)|
+| number of solving threads | average over 4 x 25,000 cube runs (cubes per second) | measured over 1 x 100,000 cube runs (cubes per second)|
 |:-----------------:|:---------------------------------:|:----------------------------------:|
 | 1 | 205.14 | 200.65 |
 | 2 | 389.94 | 373.19 |
@@ -96,15 +114,24 @@ Multi Threading Results:
 | 18 | 1732.03 | 1648.48 |
 | 19 | 1695.57 | 1690.06 |
 
+Laptop Multi Threading Results:
+- the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calulation
+- the 3rd column labelled measured 1 x 100,000 cube run means that I had that number of threads scrambling and solving 100,000 cubes and recorded the total time to scramble, solve and log the information
+
+| number of solving threads | average over 4 x 25,000 cube runs (cubes per second) | measured over 1 x 100,000 cube runs (cubes per second)|
+|:-----------------:|:---------------------------------:|:----------------------------------:|
+| 1 | 74.613 | 74.9735 |
+| 2 | 142.072 | 142.742 |
+
 ---
 
 ### Project Structure
 - bin: all executables are compiled here
-- docker: docker images
+- docker: docker instructions to build an image
 - include: all .h fles
 - obj: all .o files
 - solve_logs: sqlite3 database of all solves
-- src: all .cpp files
+- src: all .cpp files including the 3 google tests
 - tables: tables used by the solver, heuristics and transition
 - Makefile
 - README.md

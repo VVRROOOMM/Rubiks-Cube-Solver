@@ -215,7 +215,7 @@ int main(int argc, char* argv[]) {
 		Main::speedRun(123456, num_cubes);
 	}
 	else if (option == 2) {
-		Main::singleThreadLog(num_cubes, true, single_version, false);
+		Main::singleThreadLog(num_cubes, false, single_version, false);
 	}
 	else if (option == 3) {
 		//this code was to generate the data for benchmarking multi threaded code
