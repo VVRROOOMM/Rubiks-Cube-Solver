@@ -42,3 +42,6 @@
 
 # custom database
 *.db
+
+# compiled tests
+bin/
