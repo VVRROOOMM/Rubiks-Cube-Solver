@@ -32,6 +32,9 @@ MAIN_TEST_OBJ = $(OBJECT_PATH)/Main_test.o
 $(OBJECT_PATH)/Main_test.o: Main.cpp | $(OBJECT_PATH)
 	$(CXX) $(CXXFLAGS) -DUNIT_TEST -c $< -o $@
 
+$(OBJECT_PATH)/Main.o: Main.cpp | $(OBJECT_PATH)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 $(OBJECT_PATH):
 	mkdir -p $(OBJECT_PATH)
 
@@ -45,13 +48,13 @@ $(OBJECT_PATH)/%.o: %.cpp | $(OBJECT_PATH)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BIN_PATH)/$(TARGET): $(OBJECTS) | $(BIN_PATH)
-	mpicxx $(CXXFLAGS) $(OBJECTS) -o $@ $(SQLITE_FLAGS)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(SQLITE_FLAGS)
 
 $(BIN_PATH)/$(TARGET_DOCKER_SINGLE): $(OBJECTS) | $(BIN_PATH)
-	mpicxx $(CXXFLAGS) $(OBJECTS) -o $@ $(SQLITE_FLAGS)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(SQLITE_FLAGS)
 
 $(BIN_PATH)/$(TARGET_DOCKER_MULTI): $(OBJECTS) | $(BIN_PATH)
-	mpicxx $(CXXFLAGS) $(OBJECTS) -o $@ $(SQLITE_FLAGS)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(SQLITE_FLAGS)
 
 run: $(BIN_PATH)/$(TARGET) | $(DB_PATH)
 	./$(BIN_PATH)/$(TARGET)

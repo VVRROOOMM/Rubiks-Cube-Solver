@@ -6,6 +6,7 @@ This solver focuses on:
 - Correctness (extensive google tests)
 - Simplicity (the solver itself has zero external dependencies)
 - Optional SQLite logging module
+- Scalability with OpenMPI
 
 ---
 
@@ -16,6 +17,7 @@ This solver focuses on:
 - SQLite database that stores initial cubes, solutions, time to solve, and nodes explored
 - Allows the user to specify the number of threads and how many total cubes they want to solve
 - Docker file so you can build images for linux and windows
+- Supports OpenMPI to run on a cluster computer
 
 ---
 
@@ -25,6 +27,7 @@ This solver focuses on:
 - sqlite3 version 3.50.3 (version that I'm using)
 - GoogleTest for testing
 - Docker to build or run docker images
+- OpenMPI for cluster computing (optional)
 
 ---
 
@@ -36,6 +39,47 @@ For options:
 - 2: single threaded solving and logging of the specified number of cubes
 - 3: multi threaded solving and logging of the specified number of cubes (total cubes not cubes per thread)
 
+you can also pull the docker image I pushed:
+vvrrooomm/rubiks-solver-single:arm64 [this was built on a Raspberry pi 5 it runs on windows but is much slower]
+vvrrooomm/rubiks-solver-single:amd64 [this was built on a Windows computer with an Intel CPU]
+vvrrooomm/rubiks-solver-multi:arm64 [this was built on a Raspberry pi 5 and intended to be used on a cluster of Raspberry Pi 5's
+
+to use the rubiks-solver-single just do:
+docker pull [the image you want]
+docker run -v "[path to where results will save]:/app/solve_logs" [image you pulled]
+the "[path to where results will save]" will be where the solves.db is saved on your computer
+
+to use the rubiks-solver-multi all nodes must have docker and OpenMPI to work.
+On every node download docker and OpenMPI and do:
+docker pull vvrrooomm/rubiks-solver-multi:arm64
+
+then on the manager node you can run anywhere with the hosts.txt for your own cluster.
+
+Then to run do the command:
+mpirun -n [number of nodes] --hostfile [host file name, ie. hosts.txt]   bash -lc '
+    docker run --rm \
+      -e RANK=$OMPI_COMM_WORLD_RANK \
+      -e SIZE=$OMPI_COMM_WORLD_SIZE \
+      -v "[where you want to save the results]:/app/solve_logs" \
+      vvrrooomm/rubiks-solver-multi:arm64 \
+      [number of cubes]
+  '
+
+my exact command is:
+
+mpirun -n 10 --hostfile hosts.txt bash -lc '
+    docker run --rm \
+      -e RANK=$OMPI_COMM_WORLD_RANK \
+      -e SIZE=$OMPI_COMM_WORLD_SIZE \
+      -v "/home/pi/solve_logs:/app/solve_logs" \
+      vvrrooomm/rubiks-solver-multi:arm64 \
+      2000
+  '
+
+here I would run on 10 nodes/slots, and the results will be under /home/pi/solve_logs in solves.db
+over the 10 nodes/slots each would solve (2000/10 = 200) 200 cubes.
+
+Then copy them back and merge the results to a main database.
 ---
 
 ### Algorithm Overview
@@ -122,6 +166,7 @@ Laptop Multi Threading Results:
 |:-----------------:|:---------------------------------:|:----------------------------------:|
 | 1 | 74.613 | 74.9735 |
 | 2 | 142.072 | 142.742 |
+| 3 | 211.188 | 210.550 |
 
 ---
 
@@ -144,5 +189,5 @@ Laptop Multi Threading Results:
 - [x] add command line arguments/input
 - [x] add multi threading for solving cubes
 - [x] create docker images for portability and consistency
-- [ ] implement MPI so it can run on a cluster computer
+- [x] implement MPI so it can run on a cluster computer
 
