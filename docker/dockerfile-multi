@@ -31,7 +31,9 @@ WORKDIR /app
 COPY --from=builder /app/bin/multi_solver ./bin/solver
 COPY --from=builder /app/tables/ ./tables/
 
-RUN mkdir -p solve_logs
+RUN chmod +x /app/bin/solver
+
+RUN mkdir -p /app/solve_logs
 VOLUME /app/solve_logs
 
-ENTRYPOINT ["./bin/solver"]
+ENTRYPOINT ["/app/bin/solver"]
