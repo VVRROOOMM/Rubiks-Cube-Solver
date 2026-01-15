@@ -42,7 +42,8 @@ For options:
 you can also pull the docker image I pushed:
 vvrrooomm/rubiks-solver-single:arm64 [this was built on a Raspberry pi 5 it runs on windows but is much slower]
 vvrrooomm/rubiks-solver-single:amd64 [this was built on a Windows computer with an Intel CPU]
-vvrrooomm/rubiks-solver-multi:arm64 [this was built on a Raspberry pi 5 and intended to be used on a cluster of Raspberry Pi 5's
+vvrrooomm/rubiks-solver-multi:arm64 [this was built on a Raspberry pi 5 and intended to be used on a cluster of Raspberry Pi 5's]
+vvrrooomm/rubiks-solver-multi:arm64_debug [this is the same as above put prints out more information it does the same thing]
 
 to use the rubiks-solver-single just do:
 docker pull [the image you want]

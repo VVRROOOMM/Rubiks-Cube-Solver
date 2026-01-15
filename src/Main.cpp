@@ -43,7 +43,7 @@ void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int 
 			extra_cube = 0;
 		}
 		//this print statement is a debugging statement comment out if you want however note that on a cluster computer this will be messy
-		cout << "thread: " << i << " created to solve " << cubes_per_thread + extra_cube << endl;
+		//cout << "thread: " << i << " created to solve " << cubes_per_thread + extra_cube << endl;
 		//the threads call solveWrapperMulti in MultiThreadSolver.cpp
 		workers.emplace_back(MultiThreadSolver::solveWrapperMulti, ref(m), ref(q), cubes_per_thread + extra_cube);
 	}
@@ -53,6 +53,9 @@ void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int 
 
 	//call the logger as a thread
 	thread db_log(&DatabaseLogger::sqlite3_log_db_multi, &logger ,ref(q), ref(m), ref(end_program));
+	
+	//debug statement
+	//cout << "thread: " << num_threads << " created to solve " << cubes_per_thread << endl;
 	
 	//this thread is just sitting idle so just send it to solve cubes
 	MultiThreadSolver::solveWrapperMulti(ref(m), ref(q), cubes_per_thread);
@@ -307,6 +310,8 @@ int Main::clusterComputerMain(int argc, char* argv[], int rank, int size)
 		cubes_per_node++;
 	}
 	
+	cout << "Node " << rank << " starting, solving: " << cubes_per_node << " cubes" << endl;
+	
 	//load/create the solver info like tables and stuff
 	MultiThreadSolver::initializeSolver();
 	
@@ -323,12 +328,12 @@ int main(int argc, char* argv[])
 	const char* size_input = getenv("SIZE");
 	
 	//debugging statement, comment out if you want
-	if (rank_input) {
+	/*if (rank_input) {
 		cout << rank_input << endl;
 	}
 	if (size_input) {
 		cout << size_input << endl;
-	}
+	}*/
 
 	int result = 0;
 	
@@ -338,7 +343,7 @@ int main(int argc, char* argv[])
 		int size = stoi(size_input);
 		
 		//debugging statement, comment out if you want
-		cout << "MPI detected, node: " << rank << " running and calling cluster main" << endl;
+		//cout << "MPI detected, node: " << rank << " running and calling cluster main" << endl;
 		
 		//call the cluster main
 		result = Main::clusterComputerMain(argc, argv, rank, size);
