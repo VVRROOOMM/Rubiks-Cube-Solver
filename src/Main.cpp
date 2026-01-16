@@ -234,6 +234,9 @@ int Main::singleComputerMain(int argc, char* argv[]) {
 		Main::speedRun(123456, num_cubes);
 	}
 	else if (option == 2) {
+		//this is a benchmarking call, comment out if you want
+		//Main::singleThreadLog(num_cubes, true, single_version, true);
+		
 		Main::singleThreadLog(num_cubes, false, single_version, false);
 	}
 	else if (option == 3) {
@@ -249,7 +252,7 @@ int Main::singleComputerMain(int argc, char* argv[]) {
 			cout << endl;
 		}
 		
-		for (int i = 1; i <= 19; i++) {
+		for (int i = 0; i <= thread_max; i++) {
 			Main::multiThreadLogger(100000, true, multi_version, i);
 			cout << endl;
 		}*/
