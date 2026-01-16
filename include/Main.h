@@ -21,4 +21,7 @@ class Main {
 		static void multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads);
 		static void singleThreadLog(int num_cubes, bool benchmark, double version, bool print);
 		static void speedRun(int seed, int num_cubes);
+		static int singleComputerMain(int argc, char* argv[]);
+		static int clusterComputerMain(int argc, char* argv[], int rank, int size);
+		static bool running_mpi();
 };

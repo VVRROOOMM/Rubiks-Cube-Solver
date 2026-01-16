@@ -10,24 +10,30 @@ using namespace std;
 
 using s_clock = chrono::high_resolution_clock;
 
+//this method creates num_threads + 1 worker threads and 1 solver thread, so take number of threads you want and subtract 1 to use this
 void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads)
 {	
 	auto start = s_clock::now();
 	auto end = s_clock::now();
 	chrono::duration<double, milli> elapsed_time{0};
 	
+	//these will be shared queue and mutex for multithreading
 	mutex m;
 	queue<DBCube> q;
 	
+	//open the logger
 	DatabaseLogger logger("solve_logs/solves.db", version);
 	
+	//create a vector of threads to join later
 	vector<thread> workers;
 	workers.reserve(num_threads);
 
-	int cubes_per_thread = num_cubes / num_threads;
-	int remainder = num_cubes % num_threads;
+	//so the thread calling/running this method doesn't sit idle +1 to num_threads so this one will run the solver as well
+	int cubes_per_thread = num_cubes / (num_threads + 1);
+	int remainder = num_cubes % (num_threads + 1);
 	int extra_cube = 0;
 
+	//creates the threads
 	for (int i = 0; i < num_threads; i++) {
 		if (remainder > 0) {
 			extra_cube = 1;
@@ -36,20 +42,33 @@ void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int 
 		else {
 			extra_cube = 0;
 		}
+		//this print statement is a debugging statement comment out if you want however note that on a cluster computer this will be messy
+		//cout << "thread: " << i << " created to solve " << cubes_per_thread + extra_cube << endl;
+		//the threads call solveWrapperMulti in MultiThreadSolver.cpp
 		workers.emplace_back(MultiThreadSolver::solveWrapperMulti, ref(m), ref(q), cubes_per_thread + extra_cube);
 	}
 
+	//to signal we are leaving
 	atomic<bool> end_program{false};
 
+	//call the logger as a thread
 	thread db_log(&DatabaseLogger::sqlite3_log_db_multi, &logger ,ref(q), ref(m), ref(end_program));
+	
+	//debug statement
+	//cout << "thread: " << num_threads << " created to solve " << cubes_per_thread << endl;
+	
+	//this thread is just sitting idle so just send it to solve cubes
+	MultiThreadSolver::solveWrapperMulti(ref(m), ref(q), cubes_per_thread);
 	
 	for (auto& t : workers) {
 		t.join();
 	}
 	
+	//all threads join so we are done end logger
 	end_program.store(true);
 	db_log.join();
 	
+	//print info if needed
 	if (benchmark) {
 		end = s_clock::now();
 		elapsed_time = end - start;
@@ -58,7 +77,7 @@ void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int 
 		cout << (num_cubes * 1000) / elapsed_time.count() << " cubes / s" << endl;
 	}
 	
-	cout << "done running " << num_threads << " threads" << endl;
+	cout << "done running " << (num_threads + 1) << " threads" << endl;
 }
 
 void Main::singleThreadLog(int num_cubes, bool benchmark, double version, bool print)
@@ -114,8 +133,8 @@ void Main::speedRun(int seed, int num_cubes)
 	Solver::solveWrapperSpeed(cubes, true);
 }
 
-#ifndef UNIT_TEST
-int main(int argc, char* argv[]) {
+//used if mpi isn't being used
+int Main::singleComputerMain(int argc, char* argv[]) {
 	double single_version = 1.1;
 	double multi_version = 1.2;
 	
@@ -146,11 +165,11 @@ int main(int argc, char* argv[]) {
 		}
 		catch (const invalid_argument& e) {
 			cerr << "invalid value of option given" << endl;
-			return 0;
+			return 1;
 		}
 		catch (const out_of_range& e) {
 			cerr << "out of range options value given" << endl;
-			return 0;
+			return 1;
 		}
 	}
 	
@@ -162,16 +181,16 @@ int main(int argc, char* argv[]) {
 			num_cubes = stoi(string(argv[2]));
 			if (num_cubes <= 0) {
 				cout << "num_cubes was not a positive integer, program will not run" << endl;
-				return 0;
+				return 1;
 			}
 		}
 		catch (const invalid_argument& e) {
 			cerr << "invalid num_cubes value given" << endl;
-			return 0;
+			return 1;
 		}
 		catch (const out_of_range& e) {
 			cerr << "out of range num_cubes value given" << endl;
-			return 0;
+			return 1;
 		}
 	}
 	else {
@@ -186,16 +205,16 @@ int main(int argc, char* argv[]) {
 			num_threads = stoi(string(argv[3]));
 			if (num_threads <= 0) {
 				cout << "num_threads was not a positive integer, program will not run" << endl;
-				return 0;
+				return 1;
 			}
 		}
 		catch (const invalid_argument& e) {
 			cerr << "invalid num_threads value given" << endl;
-			return 0;
+			return 1;
 		}
 		catch (const out_of_range& e) {
 			cerr << "out of range num_threads value given" << endl;
-			return 0;
+			return 1;
 		}
 	}
 	else {
@@ -215,6 +234,9 @@ int main(int argc, char* argv[]) {
 		Main::speedRun(123456, num_cubes);
 	}
 	else if (option == 2) {
+		//this is a benchmarking call, comment out if you want
+		//Main::singleThreadLog(num_cubes, true, single_version, true);
+		
 		Main::singleThreadLog(num_cubes, false, single_version, false);
 	}
 	else if (option == 3) {
@@ -223,14 +245,14 @@ int main(int argc, char* argv[]) {
 		//the thread_max may fail if you have 1 thread or c++ can't determine the number of cores you have
 		/*int thread_max = (int) (thread::hardware_concurrency() - 2);
 		for (int r = 0; r < 4; r++) {
-			for (int i = 1; i <= thread_max; i++) {
+			for (int i = 0; i <= thread_max - 1; i++) {
 				Main::multiThreadLogger(25000, true, multi_version, i);
 				cout << endl;
 			}
 			cout << endl;
 		}
 		
-		for (int i = 1; i <= 19; i++) {
+		for (int i = 0; i <= thread_max; i++) {
 			Main::multiThreadLogger(100000, true, multi_version, i);
 			cout << endl;
 		}*/
@@ -239,9 +261,101 @@ int main(int argc, char* argv[]) {
 	}
 	else {
 		cout << "invalid option given" << endl;
-		return 0;
+		return 1;
 	}
 	
 	return 0;
+}
+
+//this is what's being called on a node in a cluster computer
+int Main::clusterComputerMain(int argc, char* argv[], int rank, int size)
+{
+	//default to solving a total of 100,000 cubes
+	int num_cubes = 100000;
+	int num_threads;
+	
+	//set to 2 threads as default, change if you want otherwise we subtract 2 here so that we add 1, meaning only 1 thread handles logging
+	if (thread::hardware_concurrency() <= 2) {
+		num_threads = 2;
+	}
+	else {
+		num_threads = (int) (thread::hardware_concurrency() - 2);
+	}
+	
+	//current version of the solver
+	double version = 1.3;
+	
+	//trying to get the number of cubes
+	if (argc >= 2) {
+		try
+		{
+			num_cubes = stoi(string(argv[1]));
+			if (num_cubes <= 0) {
+				cout << "num_cubes was not a positive integer, program will not run" << endl;
+				return 1;
+			}
+		}
+		catch (const invalid_argument& e) {
+			cerr << "invalid num_cubes value given" << endl;
+			return 1;
+		}
+		catch (const out_of_range& e) {
+			cerr << "out of range num_cubes value given" << endl;
+			return 1;
+		}
+	}
+	
+	//for my design node 0 doesn't do anything special it just solves cubes and logs
+	int cubes_per_node = num_cubes / size;
+	int remaining_cubes = num_cubes % size;
+	
+	if (rank < remaining_cubes) {
+		cubes_per_node++;
+	}
+	
+	cout << "Node " << rank << " starting, solving: " << cubes_per_node << " cubes" << endl;
+	
+	//load/create the solver info like tables and stuff
+	MultiThreadSolver::initializeSolver();
+	
+	multiThreadLogger(cubes_per_node, true, version, num_threads);
+	
+	return 0;
+}
+
+#ifndef UNIT_TEST
+int main(int argc, char* argv[]) 
+{
+	//get the rank input and size input from openmpi
+	const char* rank_input = getenv("RANK");
+	const char* size_input = getenv("SIZE");
+	
+	//debugging statement, comment out if you want
+	/*if (rank_input) {
+		cout << rank_input << endl;
+	}
+	if (size_input) {
+		cout << size_input << endl;
+	}*/
+
+	int result = 0;
+	
+	if (rank_input && size_input) {
+		//if they aren't null and exist mpi should pass in valid integers
+		int rank = stoi(rank_input);
+		int size = stoi(size_input);
+		
+		//debugging statement, comment out if you want
+		//cout << "MPI detected, node: " << rank << " running and calling cluster main" << endl;
+		
+		//call the cluster main
+		result = Main::clusterComputerMain(argc, argv, rank, size);
+	}
+	else {
+		//if we are not using mpi, the solver runs on the single computer
+		result = Main::singleComputerMain(argc, argv);
+	}
+	
+	return result;
 }
 #endif

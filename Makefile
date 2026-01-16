@@ -5,9 +5,11 @@ VPATH = src tests
 OBJECT_PATH = obj
 BIN_PATH = bin
 TABLE_PATH = tables
+DB_PATH = solve_logs
 
 TARGET = solver
 TARGET_DOCKER_SINGLE = single_solver
+TARGET_DOCKER_MULTI = multi_solver
 
 COORDS_TEST_TARGET = CoordsTests
 ROTATION_TEST_TARGET = RotateTests
@@ -30,11 +32,17 @@ MAIN_TEST_OBJ = $(OBJECT_PATH)/Main_test.o
 $(OBJECT_PATH)/Main_test.o: Main.cpp | $(OBJECT_PATH)
 	$(CXX) $(CXXFLAGS) -DUNIT_TEST -c $< -o $@
 
+$(OBJECT_PATH)/Main.o: Main.cpp | $(OBJECT_PATH)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 $(OBJECT_PATH):
 	mkdir -p $(OBJECT_PATH)
 
 $(BIN_PATH):
 	mkdir -p $(BIN_PATH)
+
+$(DB_PATH):
+	mkdir -p $(DB_PATH)
 
 $(OBJECT_PATH)/%.o: %.cpp | $(OBJECT_PATH)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -45,12 +53,17 @@ $(BIN_PATH)/$(TARGET): $(OBJECTS) | $(BIN_PATH)
 $(BIN_PATH)/$(TARGET_DOCKER_SINGLE): $(OBJECTS) | $(BIN_PATH)
 	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(SQLITE_FLAGS)
 
-run: $(BIN_PATH)/$(TARGET)
+$(BIN_PATH)/$(TARGET_DOCKER_MULTI): $(OBJECTS) | $(BIN_PATH)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(SQLITE_FLAGS)
+
+run: $(BIN_PATH)/$(TARGET) | $(DB_PATH)
 	./$(BIN_PATH)/$(TARGET)
 
-compile: $(BIN_PATH)/$(TARGET)
+compile: $(BIN_PATH)/$(TARGET) | $(DB_PATH)
 
-single: $(BIN_PATH)/$(TARGET_DOCKER_SINGLE)
+single: $(BIN_PATH)/$(TARGET_DOCKER_SINGLE) | $(DB_PATH)
+
+multi: $(BIN_PATH)/$(TARGET_DOCKER_MULTI) | $(DB_PATH)
 
 $(BIN_PATH)/$(COORDS_TEST_TARGET): $(COORDS_TEST_OBJECT) | $(BIN_PATH)
 	$(CXX) $(CXXFLAGS) $(COORDS_TEST_OBJECT) -o $@ $(GTEST_FLAGS)
@@ -69,7 +82,7 @@ test_rotations: $(BIN_PATH)/$(ROTATION_TEST_TARGET) | $(BIN_PATH)
 $(BIN_PATH)/$(DB_RELATED_TEST_TARGET): $(DB_RELATED_TEST_OBJECT) | $(BIN_PATH)
 	$(CXX) $(CXXFLAGS) $(DB_RELATED_TEST_OBJECT) -o $@ $(GTEST_FLAGS) $(SQLITE_FLAGS)
 
-test_database: $(BIN_PATH)/$(DB_RELATED_TEST_TARGET) | $(BIN_PATH)
+test_database: $(BIN_PATH)/$(DB_RELATED_TEST_TARGET) | $(BIN_PATH) | $(DB_PATH)
 	./$(BIN_PATH)/$(DB_RELATED_TEST_TARGET)
 
 
