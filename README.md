@@ -143,7 +143,7 @@ Raspberry pi 5 (64 bits) Results (seed 123456, on 1,000 cubes averaged over 3 ru
 - Average solve and log time per cube: 10.992 ms
 
 Laptop Multi Threading Results:
-- the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calulation
+- the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calculation
 - the 3rd column labelled measured 1 x 100,000 cube run means that I had that number of threads scrambling and solving 100,000 cubes and recorded the total time to scramble, solve and log the information
 
 | number of solving threads | average over 4 x 25,000 cube runs (cubes per second) | measured over 1 x 100,000 cube runs (cubes per second)|
@@ -169,7 +169,7 @@ Laptop Multi Threading Results:
 | 19 | 1695.57 | 1690.06 |
 
 Raspberry pi 5 (32 bits) Multi Threading Results:
-- the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calulation
+- the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calculation
 - the 3rd column labelled measured 1 x 100,000 cube run means that I had that number of threads scrambling and solving 100,000 cubes and recorded the total time to scramble, solve and log the information
 
 | number of solving threads | average over 4 x 25,000 cube runs (cubes per second) | measured over 1 x 100,000 cube runs (cubes per second)|
@@ -179,7 +179,7 @@ Raspberry pi 5 (32 bits) Multi Threading Results:
 | 3 | 211.188 | 210.550 |
 
 Raspberry pi 5 (64 bits) Multi Threading Results:
-- the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calulation
+- the 2nd column labelled average over 4 x 25,000 cube runs means that for each number of threads I measured the total speed to scramble and solve 25,000 cubes 4 times and averaged it out for the calculation
 - the 3rd column labelled measured 1 x 100,000 cube run means that I had that number of threads scrambling and solving 100,000 cubes and recorded the total time to scramble, solve and log the information
 
 | number of solving threads | average over 4 x 25,000 cube runs (cubes per second) | measured over 1 x 100,000 cube runs (cubes per second)|
@@ -191,9 +191,9 @@ Raspberry pi 5 (64 bits) Multi Threading Results:
 Raspberry pi 5 (64 bits) Multi Threading Cluster Results:
 - I took the number of nodes multiplied by 100,000 cubes to get try measuring how linearly the cluster grows
 - measured solving speed is the total time that it takes all nodes to solve their specified number of cubes, it's measured from the first time a node starts to the last node finishing solving.
-- each node records their results loclly
+- each node records their results locally
 - I then used a shell script to copy the database back to the manager and delete the database on the workers, then I merged the temporary worker databases with the master database.
-- The entire process of solving, copying and merging is measured and tht's what the throughput speed measured
+- The entire process of solving, copying and merging is measured and that's what the throughput speed measured
 
 | number of nodes (pi 5 64 bits) | measured solving speed | measured throughput speed |
 |:------------------------------:|:----------------------:|:-------------------------:|
@@ -215,7 +215,7 @@ Raspberry pi 5 (64 bits) Multi Threading Cluster Results:
 ### Project Structure
 - bin: all executables are compiled here
 - docker: docker instructions to build an image
-- include: all .h fles
+- include: all .h files
 - obj: all .o files
 - solve_logs: sqlite3 database of all solves
 - src: all .cpp files including the 3 google tests
@@ -232,4 +232,5 @@ Raspberry pi 5 (64 bits) Multi Threading Cluster Results:
 - [x] add multi threading for solving cubes
 - [x] create docker images for portability and consistency
 - [x] implement MPI so it can run on a cluster computer
+
 
