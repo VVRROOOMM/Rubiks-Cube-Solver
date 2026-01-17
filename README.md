@@ -40,13 +40,13 @@ For options:
 - 3: multi threaded solving and logging of the specified number of cubes (total cubes not cubes per thread)
 
 you can also pull the docker image I pushed:
-vvrrooomm/rubiks-solver-single:arm64 [this was built on a Raspberry pi 5 it runs on windows but is much slower]
-vvrrooomm/rubiks-solver-single:amd64 [this was built on a Windows computer with an Intel CPU]
-vvrrooomm/rubiks-solver-multi:arm64 [this was built on a Raspberry pi 5 and intended to be used on a cluster of Raspberry Pi 5's as the name suggests it's on a 64 bit operating system]
+- vvrrooomm/rubiks-solver-single:arm64 [this was built on a Raspberry pi 5 it runs on windows but is much slower]
+- vvrrooomm/rubiks-solver-single:amd64 [this was built on a Windows computer with an Intel CPU]
+- vvrrooomm/rubiks-solver-multi:arm64 [this was built on a Raspberry pi 5 and intended to be used on a cluster of Raspberry Pi 5's as the name suggests it's on a 64 bit operating system]
 
 to use the rubiks-solver-single just do:
-docker pull [the image you want]
-docker run -v "[path to where results will save]:/app/solve_logs" [image you pulled]
+- docker pull [the image you want]
+- docker run -v "[path to where results will save]:/app/solve_logs" [image you pulled]
 the "[path to where results will save]" will be where the solves.db is saved on your computer
 
 to use the rubiks-solver-multi all nodes must have docker and OpenMPI to work.
@@ -232,5 +232,6 @@ Raspberry pi 5 (64 bits) Multi Threading Cluster Results:
 - [x] add multi threading for solving cubes
 - [x] create docker images for portability and consistency
 - [x] implement MPI so it can run on a cluster computer
+
 
 
