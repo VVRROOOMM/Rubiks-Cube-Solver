@@ -45,3 +45,6 @@
 
 # compiled tests
 bin/
+
+# hosts.txt (my hosts.txt not relevant)
+hosts.txt

@@ -218,7 +218,7 @@ int Main::singleComputerMain(int argc, char* argv[]) {
 	else {
 		cout << "no num_threads specified, defaulting to: " << num_threads << endl;
 	}
-	
+
 	//initialize solver so cube.cpp and solver.cpp work
 	Solver::initializeSolver();
 
@@ -255,7 +255,7 @@ int Main::singleComputerMain(int argc, char* argv[]) {
 			cout << endl;
 		}*/
 		
-		Main::multiThreadLogger(num_cubes, true, multi_version, num_threads, false, 0, 1);
+		Main::multiThreadLogger(num_cubes, false, multi_version, num_threads, false, 0, 1);
 	}
 	else {
 		cout << "invalid option given" << endl;
@@ -316,7 +316,7 @@ int Main::clusterComputerMain(int argc, char* argv[], int rank, int size)
 	//load/create the solver info like tables and stuff
 	MultiThreadSolver::initializeSolver();
 	
-	multiThreadLogger(cubes_per_node, true, version, num_threads, true, rank, size);
+	multiThreadLogger(cubes_per_node, false, version, num_threads, true, rank, size);
 	
 	return 0;
 }
@@ -337,40 +337,41 @@ int main(int argc, char* argv[])
 		//if we are not using mpi, the solver runs on the single computer, same for if we only have 1 node as no communication is needed
 		result = Main::singleComputerMain(argc, argv);
 	}
-
-	if (rank == 0) {
-		int flag = 1;
-		char buffer[128];
-		for (int i = 1; i < size; i++) {
-			MPI_Send(&flag, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-			MPI_Recv(buffer, 128, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			cout << buffer;
-		}
-	}
 	else {
-		string msg = "Hello, from rank " + to_string(rank) + " flag has been received!\n";
-		
-		int flag = -1;
-		int message_available = 0;
-
-		MPI_Status status;
-
-		while (message_available == 0) {
-			MPI_Iprobe(0, 0, MPI_COMM_WORLD, &message_available, &status);
+		if (rank == 0) {
+			int flag = 1;
+			char buffer[128];
+			for (int i = 1; i < size; i++) {
+				MPI_Send(&flag, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+				MPI_Recv(buffer, 128, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				cout << buffer;
+			}
 		}
+		else {
+			string msg = "Hello, from rank " + to_string(rank) + " flag has been received!\n";
+			
+			int flag = -1;
+			int message_available = 0;
 
-		MPI_Recv(&flag, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Status status;
 
-		if (flag == 1) {
-			MPI_Send(msg.c_str(), msg.length() + 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+			while (message_available == 0) {
+				MPI_Iprobe(0, 0, MPI_COMM_WORLD, &message_available, &status);
+			}
+
+			MPI_Recv(&flag, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+			if (flag == 1) {
+				MPI_Send(msg.c_str(), msg.length() + 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+			}
 		}
+			
+		//debugging statement, comment out if you want
+		//cout << "MPI detected, node: " << rank << " running and calling cluster main" << endl;
+
+		//call the cluster main
+		result = Main::clusterComputerMain(argc, argv, rank, size);
 	}
-		
-	//debugging statement, comment out if you want
-	//cout << "MPI detected, node: " << rank << " running and calling cluster main" << endl;
-
-	//call the cluster main
-	result = Main::clusterComputerMain(argc, argv, rank, size);
 	
 	MPI_Finalize();
 

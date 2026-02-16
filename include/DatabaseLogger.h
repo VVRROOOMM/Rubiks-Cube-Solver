@@ -15,6 +15,7 @@
 #include <cstdlib>
 #define OMPI_SKIP_MPICXX
 #include <mpi.h>
+#include <sstream>
 
 #include "DBCube.h"
 
