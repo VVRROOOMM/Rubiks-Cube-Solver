@@ -13,12 +13,16 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <iostream>
+#define OMPI_SKIP_MPICXX
+#include <mpi.h>
+#include <cstring>
 
 using namespace std;
 
 class Main {
 	public:
-		static void multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads);
+		static void multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads, bool mpi_used, int rank, int size);
 		static void singleThreadLog(int num_cubes, bool benchmark, double version, bool print);
 		static void speedRun(int seed, int num_cubes);
 		static int singleComputerMain(int argc, char* argv[]);

@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "Main.h"
 #include "DBCube.h"
 #include "Solver.h"
@@ -11,7 +9,7 @@ using namespace std;
 using s_clock = chrono::high_resolution_clock;
 
 //this method creates num_threads + 1 worker threads and 1 solver thread, so take number of threads you want and subtract 1 to use this
-void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads)
+void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads, bool mpi_used, int rank, int size)
 {	
 	auto start = s_clock::now();
 	auto end = s_clock::now();
@@ -52,7 +50,7 @@ void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int 
 	atomic<bool> end_program{false};
 
 	//call the logger as a thread
-	thread db_log(&DatabaseLogger::sqlite3_log_db_multi, &logger ,ref(q), ref(m), ref(end_program));
+	thread db_log(&DatabaseLogger::sqlite3_log_db_multi, &logger ,ref(q), ref(m), ref(end_program), mpi_used, rank, size);
 	
 	//debug statement
 	//cout << "thread: " << num_threads << " created to solve " << cubes_per_thread << endl;
@@ -246,18 +244,18 @@ int Main::singleComputerMain(int argc, char* argv[]) {
 		/*int thread_max = (int) (thread::hardware_concurrency() - 2);
 		for (int r = 0; r < 4; r++) {
 			for (int i = 0; i <= thread_max - 1; i++) {
-				Main::multiThreadLogger(25000, true, multi_version, i);
+				Main::multiThreadLogger(25000, true, multi_version, i, false, 0, 1);
 				cout << endl;
 			}
 			cout << endl;
 		}
 		
 		for (int i = 0; i <= thread_max; i++) {
-			Main::multiThreadLogger(100000, true, multi_version, i);
+			Main::multiThreadLogger(100000, true, multi_version, i, false, 0, 1);
 			cout << endl;
 		}*/
 		
-		Main::multiThreadLogger(num_cubes, true, multi_version, num_threads);
+		Main::multiThreadLogger(num_cubes, true, multi_version, num_threads, false, 0, 1);
 	}
 	else {
 		cout << "invalid option given" << endl;
@@ -318,7 +316,7 @@ int Main::clusterComputerMain(int argc, char* argv[], int rank, int size)
 	//load/create the solver info like tables and stuff
 	MultiThreadSolver::initializeSolver();
 	
-	multiThreadLogger(cubes_per_node, true, version, num_threads);
+	multiThreadLogger(cubes_per_node, true, version, num_threads, true, rank, size);
 	
 	return 0;
 }
@@ -326,36 +324,56 @@ int Main::clusterComputerMain(int argc, char* argv[], int rank, int size)
 #ifndef UNIT_TEST
 int main(int argc, char* argv[]) 
 {
-	//get the rank input and size input from openmpi
-	const char* rank_input = getenv("RANK");
-	const char* size_input = getenv("SIZE");
-	
-	//debugging statement, comment out if you want
-	/*if (rank_input) {
-		cout << rank_input << endl;
-	}
-	if (size_input) {
-		cout << size_input << endl;
-	}*/
-
+	int rank = 0;
+	int size = 0;
 	int result = 0;
-	
-	if (rank_input && size_input) {
-		//if they aren't null and exist mpi should pass in valid integers
-		int rank = stoi(rank_input);
-		int size = stoi(size_input);
-		
-		//debugging statement, comment out if you want
-		//cout << "MPI detected, node: " << rank << " running and calling cluster main" << endl;
-		
-		//call the cluster main
-		result = Main::clusterComputerMain(argc, argv, rank, size);
-	}
-	else {
-		//if we are not using mpi, the solver runs on the single computer
+
+	MPI_Init(&argc, &argv);
+
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	if (size == 1) {
+		//if we are not using mpi, the solver runs on the single computer, same for if we only have 1 node as no communication is needed
 		result = Main::singleComputerMain(argc, argv);
 	}
+
+	if (rank == 0) {
+		int flag = 1;
+		char buffer[128];
+		for (int i = 1; i < size; i++) {
+			MPI_Send(&flag, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+			MPI_Recv(buffer, 128, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			cout << buffer;
+		}
+	}
+	else {
+		string msg = "Hello, from rank " + to_string(rank) + " flag has been received!\n";
+		
+		int flag = -1;
+		int message_available = 0;
+
+		MPI_Status status;
+
+		while (message_available == 0) {
+			MPI_Iprobe(0, 0, MPI_COMM_WORLD, &message_available, &status);
+		}
+
+		MPI_Recv(&flag, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		if (flag == 1) {
+			MPI_Send(msg.c_str(), msg.length() + 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+		}
+	}
+		
+	//debugging statement, comment out if you want
+	//cout << "MPI detected, node: " << rank << " running and calling cluster main" << endl;
+
+	//call the cluster main
+	result = Main::clusterComputerMain(argc, argv, rank, size);
 	
+	MPI_Finalize();
+
 	return result;
 }
 #endif

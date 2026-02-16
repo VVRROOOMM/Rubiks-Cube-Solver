@@ -1,7 +1,5 @@
 #include "DatabaseLogger.h"
 
-#include <iostream>
-
 using namespace std;
 
 //creates a database logger object
@@ -38,6 +36,93 @@ DatabaseLogger::~DatabaseLogger()
 {
 	sqlite3_finalize(stmt);
 	sqlite3_close_v2(db);
+}
+
+void DatabaseLogger::getReadings(long long readings[])
+{
+	ifstream reader("/proc/stat");
+	string line;
+
+	getline(reader, line);
+
+	char *end = NULL;
+	size_t offset = 0;	
+
+	for (int i = 0; i < 10; i++) {
+		offset = line.find_first_of("0123456789", offset);
+
+		if (offset == string::npos) {
+			break;
+		}
+
+		readings[i] = strtoll(line.substr(offset).c_str(), &end, 10);
+
+		offset = end - line.c_str();
+	}
+}
+
+float DatabaseLogger::getCPUUsage(long long readings[])
+{
+	long long new_readings[10];
+
+	long long total_cpu = 0;
+	long long total_used_cpu = 0;
+	long long temp = 0;
+
+	getReadings(new_readings);
+
+	for (int i = 0; i < 10; i++) {
+		temp = new_readings[i] - readings[i];
+		total_cpu += temp;
+		if (i != 3 && i != 4) {
+			total_used_cpu += temp;
+		}
+		readings[i] = new_readings[i];
+	}
+
+	if (total_cpu == 0) {
+		return 0.0;
+	}
+
+	return total_used_cpu * 100.0 / total_cpu;
+}
+
+float DatabaseLogger::getRAMUsage()
+{
+	ifstream reader("/proc/meminfo");
+	string line;
+
+	getline(reader, line);
+	
+	size_t offset = line.find_first_of("0123456789");
+	long totalRAM =  strtol(line.substr(offset).c_str(), NULL, 10);
+
+	getline(reader, line);
+
+	offset = line.find_first_of("0123456789");
+	long RAMLeft = strtol(line.substr(offset).c_str(), NULL, 10);
+
+	if (totalRAM == 0) {
+		return 0.0;
+	}
+
+	return 100 - RAMLeft * 100.0 / totalRAM;
+}
+
+string DatabaseLogger::formatMessage(int cubes_done, int rank, int reportNum, long long readings[])
+{
+	string message;
+	message.reserve(128);
+
+	message.append("{");
+	message.append("\"node\": " + to_string(rank));
+	message.append(", \"cubesSolved\": "+ to_string(cubes_done));
+	message.append(", \"cpuUsage\": " + to_string(getCPUUsage(readings)));
+	message.append(", \"ramUsage\": " + to_string(getRAMUsage()));
+	message.append(", \"reportNumber\": " + to_string(reportNum));
+	message.append("}");
+
+	return message;
 }
 
 //log a vector of cubes through a transaction so it's faster
@@ -84,17 +169,62 @@ int DatabaseLogger::sqlite3_log_db(DBCube& cube)
 
 //this is the logger for when you use option 3 or multiple threads
 //the worker threads push into the to_log queue, mutex m is shared
-int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic<bool>& end_program)
+int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic<bool>& end_program, bool mpi_used, int rank, int size)
 {
 	vector<DBCube> temp;
 	temp.reserve(2000);
 	
-	while (true) {
-		if (end_program) {
-			break;
+	if (!mpi_used) {
+		while (true) {
+			if (end_program) {
+				break;
+			}
+			//this doesn't really care about the exact size but once the queue is 1000 or more then we actually care
+			if (to_log.size() >= 1000) {
+				{
+					//lock the mutex, then remove all DBCube objects from the queue into the temporary vector
+					lock_guard<mutex> lock(m);
+					
+					while (!to_log.empty()) {
+						temp.emplace_back(to_log.front());
+						to_log.pop();
+					}
+				}
+				
+				//log the DBcubes, then clear the vector again
+				sqlite3_log_db(temp);
+				temp.clear();
+			}
 		}
-		//this doesn't really care about the exact size but once the queue is 1000 or more then we actually care
-		if (to_log.size() >= 1000) {
+	}
+
+	int cubes_since_last_report = 0;
+	int reportNum = 0;
+	string message;
+	int reportStatsFlag = 67;
+	int endFlag = 69;
+
+	long long cpuReadings[10];
+
+	message.reserve(1024);
+
+	if (rank == 0) {
+		int nodes_left = size;
+		char buffer[128];
+
+		while (true) {
+			//sleep so we don't force workers to lock the queue a lot
+			this_thread::sleep_for(chrono::milliseconds(500));
+
+			//if this node is the last one, and end_program is called then exit
+			if (end_program && nodes_left == 1) {
+				break;
+			}
+
+			for (int i = 1; i < size; i++) {
+				MPI_Send(&reportStatsFlag, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+			}
+
 			{
 				//lock the mutex, then remove all DBCube objects from the queue into the temporary vector
 				lock_guard<mutex> lock(m);
@@ -104,10 +234,69 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 					to_log.pop();
 				}
 			}
-			
+
+			cubes_since_last_report = temp.size();
+
 			//log the DBcubes, then clear the vector again
 			sqlite3_log_db(temp);
 			temp.clear();
+
+			message = formatMessage(cubes_since_last_report, rank, reportNum, cpuReadings);
+
+			cout << "Node 0: " << message << endl;
+
+			for (int i = 1; i < size; i++) {
+				MPI_Recv(buffer, 128, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				message.append(buffer);
+				cout << "Node " << i << ": " << buffer << endl;
+			}
+
+			reportNum++;
+
+			cout << "final message: " << message << endl;
+		}
+	}
+	else {
+		while (true) {
+			if (end_program) {
+				MPI_Send(&endFlag, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+				break;
+			}
+
+			int flag = -1;
+			int message_available = 0;
+
+			MPI_Iprobe(0, 0, MPI_COMM_WORLD, &message_available, MPI_STATUS_IGNORE);
+
+			if (message_available == 1) {
+				MPI_Recv(&flag, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			}
+
+			//this doesn't really care about the exact size but once the queue is 1000 or more then we actually care
+			if (to_log.size() >= 1000 || flag == reportStatsFlag) {
+				{
+					//lock the mutex, then remove all DBCube objects from the queue into the temporary vector
+					lock_guard<mutex> lock(m);
+					
+					while (!to_log.empty()) {
+						temp.emplace_back(to_log.front());
+						to_log.pop();
+					}
+				}
+				
+				cubes_since_last_report += to_log.size();
+
+				if (flag == reportStatsFlag) {
+					message = formatMessage(cubes_since_last_report, rank, reportNum, cpuReadings);
+					reportNum++;
+					cubes_since_last_report = 0;
+					MPI_Send(message.c_str(), message.length() + 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+				}
+
+				//log the DBcubes, then clear the vector again
+				sqlite3_log_db(temp);
+				temp.clear();
+			}
 		}
 	}
 	

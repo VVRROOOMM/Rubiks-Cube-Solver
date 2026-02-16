@@ -1,4 +1,5 @@
-CXX = g++
+# CXX = g++
+CXX = mpic++
 CXXFLAGS = -std=c++20 -Wall -Wextra -O3 -I include
 VPATH = src tests
 
