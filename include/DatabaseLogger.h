@@ -16,10 +16,16 @@
 #define OMPI_SKIP_MPICXX
 #include <mpi.h>
 #include <sstream>
+#include <cstring>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 #include "DBCube.h"
 
 #include <sqlite3.h>
+
+#define PORT_NUM 5000
 
 using namespace std;
 

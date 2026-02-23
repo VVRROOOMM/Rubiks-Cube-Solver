@@ -134,8 +134,8 @@ string DatabaseLogger::formatMessage(int cubes_done, int rank, int reportNum, lo
 	string message;
 	message.reserve(2048);
 
-	message.append("{");
-	message.append("\"node\": " + to_string(rank));
+	//message.append("\"node" + to_string(rank) + "\": {");
+	message.append("{\"nodeID\": " + to_string(rank));
 	message.append(", \"cubesSolved\": "+ to_string(cubes_done));
 	message.append(", \"cpuUsage\": " + to_string(getCPUUsage(readings)));
 	message.append(", \"ramUsage\": " + to_string(getRAMUsage()));
@@ -206,6 +206,9 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 	int flag = -1;
 	int message_available = 0;
 
+	bool firstMessage = true;
+	bool log = false;
+
 	long long cpuReadings[10];
 
 	message.reserve(1024);
@@ -216,13 +219,22 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 
 	if (!mpi_used) {
 		while (true) {
-			this_thread::sleep_for(chrono::milliseconds(1));
+			log = false;
+			this_thread::sleep_for(chrono::milliseconds(10));
 			if (end_program) {
 				break;
 			}
 
+			{
+				lock_guard<mutex> lock(m);
+
+				if (to_log.size() >= 1000) {
+					log = true;
+				}
+			}
+
 			//this doesn't really care about the exact size but once the queue is 1000 or more then we actually care
-			if (to_log.size() >= 1000) {
+			if (log) {
 				{
 					//lock the mutex, then remove all DBCube objects from the queue into the temporary vector
 					lock_guard<mutex> lock(m);
@@ -243,13 +255,32 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 		getReadings(cpuReadings);
 
 		if (rank == 0) {
+			int socket_description = socket(AF_INET, SOCK_STREAM, 0);
+			struct sockaddr_in server;
+
 			int nodes_left = size;
 			char buffer[2048];
+
+			server.sin_family = AF_INET;
+			server.sin_port = htons(PORT_NUM);
+			server.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+			if (socket_description == -1) {
+				cout << "Socket wasn't created" << endl;
+				return -1;
+			}
+
+			if (connect(socket_description, (struct sockaddr *)&server, sizeof(server)) < 0) {
+				cerr << "Connecting to server has failed!" << endl;
+				return 1;
+			}
 
 			while (true) {
 				//sleep so we don't force workers to lock the queue a lot
 				this_thread::sleep_for(chrono::milliseconds(1000));
+
 				message_available = 0;
+				firstMessage = true;
 
 				for (int i = 1; i < size; i++) {
 					MPI_Iprobe(i, endTag, MPI_COMM_WORLD, &message_available, MPI_STATUS_IGNORE);
@@ -259,7 +290,7 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 						if (flag == endFlag) {
 							inProgress[i] = false;
 							nodes_left--;
-							cout << "Node " << i << " end flag has been read" << endl;
+							//cout << "Node " << i << " end flag has been read" << endl;
 						}
 					}
 					else if (inProgress[i]) {
@@ -272,6 +303,7 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 					nodes_left--;
 				}
 				else if (nodes_left == 0) {
+					close(socket_description);
 					break;
 				}
 
@@ -291,37 +323,65 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 				sqlite3_log_db(temp);
 				temp.clear();
 
-				message = formatMessage(cubes_since_last_report, rank, reportNum, cpuReadings);
+				message = "{\"type\": \"report\", \"nodes\": [";
 
-				cout << "Node 0: " << message << endl;
+				//cout << "Node 0 message: " << message << endl;
+
+				if (inProgress[0]) {
+					message.append(formatMessage(cubes_since_last_report, rank, reportNum, cpuReadings));
+					firstMessage = false;
+				}
 
 				for (int i = 1; i < size; i++) {
 					if (inProgress[i]) {
 						MPI_Recv(buffer, 2048, MPI_CHAR, i, statsTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+						if (!firstMessage) {
+							message.append(",");
+						}
+						else {
+							firstMessage = false;
+						}
 						message.append(buffer);
-						cout << "Node " << i << ": " << buffer << endl;
+
+						//cout << "Node " << i << " message: " << buffer << endl;
 					}
 					else {
 						MPI_Iprobe(i, statsTag, MPI_COMM_WORLD, &message_available, MPI_STATUS_IGNORE);
 
 						if (message_available == 1) {
 							MPI_Recv(buffer, 2048, MPI_CHAR, i, statsTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+							if (!firstMessage) {
+								message.append(",");
+							}
+							else {
+								firstMessage = false;
+							}
 							message.append(buffer);
-							cout << "Node " << i << ": " << buffer << endl;
+							//cout << "Node " << i << " message: " << buffer << endl;
 						}
 						else {
-							cout << "Node " << i << " is done!" << endl;
+							//cout << "Node " << i << " is done!" << endl;
 						}
 					}
 				}
 
-				reportNum++;
+				message.append("]}\n");
 
 				cout << "combined message: " << message << endl;
+
+				if (send(socket_description, message.c_str(), message.length(), 0) < 0) {
+					cout << "Report " << reportNum << " has not been sent correctly!" << endl;
+				}
+				else {
+					cout << "Report " << reportNum << " has been sent correctly!" << endl;
+				}
+
+				reportNum++;
 			}
 		}
 		else {
 			while (true) {
+				log = false;
 				flag = -1;
 				message_available = 0;
 
@@ -340,11 +400,11 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 					sqlite3_log_db(temp);
 
 					MPI_Send(&endFlag, 1, MPI_INT, 0, endTag, MPI_COMM_WORLD);
-					cout << "Node " << rank << " is done! sent final message then end flag" << endl;
+					//cout << "Node " << rank << " is done! sent final message then end flag" << endl;
 					break;
 				}
 
-				this_thread::sleep_for(chrono::milliseconds(1));
+				this_thread::sleep_for(chrono::milliseconds(10));
 
 				MPI_Iprobe(0, statsTag, MPI_COMM_WORLD, &message_available, MPI_STATUS_IGNORE);
 
@@ -352,8 +412,16 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 					MPI_Recv(&flag, 1, MPI_INT, 0, statsTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				}
 
+				{
+					lock_guard<mutex> lock(m);
+
+					if (to_log.size() >= 1000) {
+						log = true;
+					}
+				}
+
 				//this doesn't really care about the exact size but once the queue is 1000 or more then we actually care
-				if (to_log.size() >= 1000 || flag == reportStatsFlag) {
+				if (log || flag == reportStatsFlag) {
 					{
 						//lock the mutex, then remove all DBCube objects from the queue into the temporary vector
 						lock_guard<mutex> lock(m);
