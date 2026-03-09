@@ -197,6 +197,7 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 	int cubes_since_last_report = 0;
 	int reportNum = 0;
 	string message;
+
 	const int reportStatsFlag = 42;
 	const int statsTag = 420;
 
@@ -252,6 +253,7 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 		}
 	}
 	else {
+		int total_logged = 0;
 		getReadings(cpuReadings);
 
 		if (rank == 0) {
@@ -298,15 +300,6 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 					}
 				}
 
-				if (end_program && inProgress[0]) {
-					inProgress[0] = false;
-					nodes_left--;
-				}
-				else if (nodes_left == 0) {
-					close(socket_description);
-					break;
-				}
-
 				{
 					//lock the mutex, then remove all DBCube objects from the queue into the temporary vector
 					lock_guard<mutex> lock(m);
@@ -318,6 +311,7 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 				}
 
 				cubes_since_last_report = temp.size();
+				total_logged += cubes_since_last_report;
 
 				//log the DBcubes, then clear the vector again
 				sqlite3_log_db(temp);
@@ -330,6 +324,15 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 				if (inProgress[0]) {
 					message.append(formatMessage(cubes_since_last_report, rank, reportNum, cpuReadings));
 					firstMessage = false;
+				}
+
+				if (end_program && inProgress[0]) {
+					inProgress[0] = false;
+					nodes_left--;
+				}
+				else if (nodes_left == 0) {
+					close(socket_description);
+					break;
 				}
 
 				for (int i = 1; i < size; i++) {
@@ -393,11 +396,13 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 					}
 
 					cubes_since_last_report += temp.size();
+					total_logged += cubes_since_last_report;
 
 					message = formatMessage(cubes_since_last_report, rank, reportNum, cpuReadings);
 					MPI_Send(message.c_str(), message.length() + 1, MPI_CHAR, 0, statsTag, MPI_COMM_WORLD);
 
 					sqlite3_log_db(temp);
+					temp.clear();
 
 					MPI_Send(&endFlag, 1, MPI_INT, 0, endTag, MPI_COMM_WORLD);
 					//cout << "Node " << rank << " is done! sent final message then end flag" << endl;
@@ -433,6 +438,7 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 					}
 					
 					cubes_since_last_report += temp.size();
+					total_logged += cubes_since_last_report;
 
 					if (flag == reportStatsFlag) {
 						message = formatMessage(cubes_since_last_report, rank, reportNum, cpuReadings);
@@ -447,6 +453,8 @@ int DatabaseLogger::sqlite3_log_db_multi(queue<DBCube>& to_log, mutex& m, atomic
 				}
 			}
 		}
+
+		cout << "Node " << rank << " has logged " << total_logged << endl;
 	}
 	
 	//once all workers leave the queue size may or may not be above 1000 in size, so we just empty it one more time and log what's left over

@@ -22,6 +22,7 @@ using namespace std;
 
 class Main {
 	public:
+		static string formatMessage(int rank, int goal);
 		static void multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads, bool mpi_used, int rank, int size);
 		static void singleThreadLog(int num_cubes, bool benchmark, double version, bool print);
 		static void speedRun(int seed, int num_cubes);

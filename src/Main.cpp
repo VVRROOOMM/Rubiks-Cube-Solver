@@ -8,6 +8,18 @@ using namespace std;
 
 using s_clock = chrono::high_resolution_clock;
 
+string Main::formatMessage(int rank, int goal)
+{
+	string message;
+
+	message.append("{");
+	message.append("\"nodeID\": " + to_string(rank));
+	message.append(", \"cubesToSolve\": " + to_string(goal));
+	message.append("}");
+
+	return message;
+}
+
 //this method creates num_threads + 1 worker threads and 1 solver thread, so take number of threads you want and subtract 1 to use this
 void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int num_threads, bool mpi_used, int rank, int size)
 {	
@@ -75,7 +87,7 @@ void Main::multiThreadLogger(int num_cubes, bool benchmark, double version, int 
 		cout << (num_cubes * 1000) / elapsed_time.count() << " cubes / s" << endl;
 	}
 	
-	cout << "done running " << (num_threads + 1) << " threads" << endl;
+	//cout << "done running " << (num_threads + 1) << " threads" << endl;
 }
 
 void Main::singleThreadLog(int num_cubes, bool benchmark, double version, bool print)
@@ -271,7 +283,11 @@ int Main::clusterComputerMain(int argc, char* argv[], int rank, int size)
 	//default to solving a total of 100,000 cubes
 	int num_cubes = 100000;
 	int num_threads;
-	
+
+	const int goalTag = 25;
+
+	string message;
+
 	//set to 2 threads as default, change if you want otherwise we subtract 2 here so that we add 1, meaning only 1 thread handles logging
 	if (thread::hardware_concurrency() <= 2) {
 		num_threads = 2;
@@ -311,8 +327,69 @@ int Main::clusterComputerMain(int argc, char* argv[], int rank, int size)
 		cubes_per_node++;
 	}
 	
-	cout << "Node " << rank << " starting, solving: " << cubes_per_node << " cubes" << endl;
+	//cout << "Node " << rank << " starting, solving: " << cubes_per_node << " cubes" << endl;
 	
+	if (rank == 0) {
+		int socket_description = socket(AF_INET, SOCK_STREAM, 0);
+		struct sockaddr_in server;
+
+		char buffer[2048];
+
+		server.sin_family = AF_INET;
+		server.sin_port = htons(PORT_NUM);
+		server.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+		if (socket_description == -1) {
+			cout << "Socket wasn't created" << endl;
+			return -1;
+		}
+
+		if (connect(socket_description, (struct sockaddr *)&server, sizeof(server)) < 0) {
+			cerr << "Connecting to server has failed!" << endl;
+			return 1;
+		}
+
+		/*for (int i = 1; i < size; i++) {
+			MPI_Send(&goalFlag, 1, MPI_INT, i, goalTag, MPI_COMM_WORLD);
+		}*/
+
+
+		message = "{\"type\": \"goals\", \"nodes\": [";
+
+		//cout << "Node 0 message: " << message << endl;
+
+		message.append(Main::formatMessage(rank, cubes_per_node));
+
+		for (int i = 1; i < size; i++) {
+			MPI_Recv(buffer, 2048, MPI_CHAR, i, goalTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			message.append(",");
+			message.append(buffer);
+
+			//cout << "Node " << i << " message: " << buffer << endl;
+		}
+
+		message.append("]}\n");
+
+		cout << "combined message: " << message << endl;
+
+		if (send(socket_description, message.c_str(), message.length(), 0) < 0) {
+			cout << "Goals JSON has not been sent correctly!" << endl;
+		}
+		else {
+			cout << "Goals JSON has been sent correctly!" << endl;
+		}
+
+		close(socket_description);
+	}
+	else {
+
+		//MPI_Recv(&flag, 1, MPI_INT, 0, statsTag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+		message = Main::formatMessage(rank, cubes_per_node);
+
+		MPI_Send(message.c_str(), message.length() + 1, MPI_CHAR, 0, goalTag, MPI_COMM_WORLD);
+	}
+
 	//load/create the solver info like tables and stuff
 	MultiThreadSolver::initializeSolver();
 	
