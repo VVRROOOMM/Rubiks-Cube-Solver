@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>
+			Cluster Dashboard
+		</title>
+		<style>
+			.stat-box {
+				border: 1px solid #ccc;
+				padding: 10px;
+				margin: 10px;
+				width: 250px;
+				display: inline-block;
+				vertical-align: top;
+				background: #f9f9f9;
+				border-radius: 6px;
+			}
+			.box-title {
+				font-weight: bold;
+				margin-bottom: 8px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>
+			Cluster Stats
+		</h1>
+		<button onclick = "loadStats()">
+			Refresh
+		</button>
+		<div id = "nodes"> </div>
+		<script src = "script.js"> </script>
+	</body>
+</html>
