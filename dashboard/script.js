@@ -3,7 +3,9 @@ function loadStats()
 	fetch("http://10.0.0.190:5001/stats")
 	.then(res => res.json())
 	.then (data => {
-		console.log('DATA RECEIVED: ', data)
+		if (Object.keys(data).length === 0) {
+			return;
+		}
 		
 		const container = document.getElementById("nodes");
 		container.innerHTML = "";
@@ -35,6 +37,8 @@ function loadStats()
 			
 			container.appendChild(box);
 		}
+		
+		setTimeout(loadStats, 2000);
 	})
 	.catch (err => {
 		console.log('Error: ', err);
